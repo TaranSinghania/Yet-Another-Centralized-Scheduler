@@ -2,16 +2,21 @@ import json
 import threading
 import socket
 import sys
+import time
+
 
 def listener(args):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('127.0.0.1', args))
+    s.listen()
     while True:
-        s.listen()
+        
         conn, addr = s.accept()
         data = conn.recv(1024)
         task_info = json.loads(data)
-        threading.Thread(target=task,args=[task_info,s]).start()
+        l = threading.Thread(target=task,args=[task_info,s])
+        l.start()
+        l.join()
         
 
 

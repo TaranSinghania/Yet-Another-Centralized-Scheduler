@@ -44,25 +44,26 @@ def jobRequests(config, schedulingAlgorithm): #TODO: Add concurrency, locking an
     HOST = 'localhost'
     PORT = 5000
 
+    s_job = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        s.bind((HOST, PORT))
+        s_job.bind((HOST, PORT))
     except socket.error as err:
         #print("Binding failed. Error Code: " + str(err[0]) + "Message" +  err[1])
         print("Failed to bind.", err)
         sys.exit()
     
-    
+    s_job.listen(1)
     while(1):
-        s.listen(1)
-        connectionSocket, address = s.accept()
+        
+        connectionSocket, address = s_job.accept()
         job = connectionSocket.recv(1024)
-
+        
         if job == None:
             connectionSocket.close()
             print("No more jobs. All jobs completed!")
             sys.exit()        
-
+        job = job.decode()
         
         for i in range(0, len(job["map_tasks"])):
             dictToSend = {}
