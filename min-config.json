@@ -1,0 +1,9 @@
+{
+  "workers": [
+    {
+      "worker_id": 1,
+      "slots": 5,
+      "port": 4000
+    }
+  ]
+}

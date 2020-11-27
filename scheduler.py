@@ -12,7 +12,7 @@ class Scheduler:
     def select(self, workers: list, lock):
         # Acquire lock while searching
         # Return the worker_id of a single worker
-        # Return None if no slot is available
+        # Return -1 if no slot is available
         raise NotImplementedError
 
 
@@ -32,4 +32,4 @@ class Random(Scheduler):
             yet_to_try.pop(index)
         else:
             # Could not find a free slot in any worker
-            return None
+            return -1
