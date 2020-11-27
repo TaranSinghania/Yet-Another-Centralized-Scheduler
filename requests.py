@@ -51,6 +51,3 @@ if __name__ == '__main__':
 		send_request(job_request)
 		last_request_time=time.time()
 		request_number+=1
-
-
-
