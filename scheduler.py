@@ -64,3 +64,16 @@ class RoundRobin(Scheduler):
             counter -= 1
         else:
             return -1
+
+
+class LeastLoaded(Scheduler):
+    """
+    Pick the least loaded machine
+    """
+    name = "LeastLoaded"
+    def select(self, workers: list):
+        condition = True
+        while condition:
+            pass
+        else:
+            return -1
