@@ -446,7 +446,7 @@ def main():
     #NOTE: Set the scheduler here
     spider_man = TaskMaster(scheduler.RoundRobin(), config)
 
-    for worker in spider_man.workers:
+    for worker in spider_man.workers.values():
         print(worker)
 
     # Create separate threads

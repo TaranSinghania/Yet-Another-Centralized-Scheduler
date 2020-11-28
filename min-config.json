@@ -4,6 +4,11 @@
       "worker_id": 1,
       "slots": 5,
       "port": 4000
+    },
+    {
+      "worker_id": 2,
+      "slots": 6,
+      "port": 4001
     }
   ]
 }
