@@ -9,6 +9,8 @@ class Scheduler:
     """
     A single function to pick a worker from a list of worker
     """
+    # Useful for log file naming
+    name = "Default-Scheduler"
     def select(self, workers: list, lock):
         # Acquire lock while searching
         # Return the worker_id of a single worker
@@ -20,6 +22,7 @@ class Random(Scheduler):
     """
     Randomly selects a worker with a free slot
     """
+    name = "RandomScheduler"
     def select(self, workers: list):
         # If a worker is not free remove from random selection
         yet_to_try = workers.copy()

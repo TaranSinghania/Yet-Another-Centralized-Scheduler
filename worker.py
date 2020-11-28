@@ -50,11 +50,14 @@ class Worker:
         server_sock.bind(address)
         server_sock.listen()
 
+        with self.lock["stdout"]:
+            print("READY FOR REQUESTS")
+
         while True:
             # Listen for requests from master
             data = utility.sock_recv(server_sock)
             task = json.loads(data)
-            # Possible BUG - task has 0 duration
+            # Possible BUG - case when task has 0 duration
             # Add task to execution pool
             self.lock["pool"].acquire()
             self.pool.append(task)

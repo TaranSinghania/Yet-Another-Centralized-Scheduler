@@ -12,6 +12,7 @@ Use the utility module for all communications
 
 Deadlock prevention method:  
 Each thread holds max one lock at any given time
+To increase readability replace acquire-release with a `with` block where possible
 """
 import uuid
 import json
@@ -85,8 +86,12 @@ class Worker:
     def __init__(self, w_id, slots, port):
         self.w_id = w_id
         self.port = port
+        # Max number of tasks allocatable
+        self.capacity = slots
         # How many free slots
         self.free = slots
+        # How many slots being used right now
+        self.used = 0
         # Create a socket to send data to the worker
         # Hash to prefix all communications with
         self.hash = uuid.uuid4().hex
@@ -98,6 +103,7 @@ class Worker:
         task.dispatch()
         # Reduce one slot on the worker machine
         self.free -= 1
+        self.used += 1
         # The worker only needs to know the hash and duration of the task
         # Attach a hash to all messages sent to this worker
         # This way, when the message comes back in the taskmaster we know which
@@ -160,6 +166,13 @@ class TaskMaster:
             "stdin", "stdout"
         ]
         self.lock = {item: threading.Lock() for item in lockable_items}
+
+        # The worker-load log file
+        self.w_log = scheduler.name + "Worker.log"
+        with open(self.w_log, 'w') as wire:
+            # Write the log file format
+            # Worker-id - number of tasks
+            wire.write("# Worker-id - Number of tasks running\n")
     
     #NOTE: Separate thread
     def serve(self):
@@ -169,7 +182,7 @@ class TaskMaster:
         server_sock.bind(CLIENT_SIDE_ADDR)
         server_sock.listen()
         self.lock["stdout"].acquire()
-        print("ALL GOOD")
+        print("LISTENING FOR REQUESTS")
         self.lock["stdout"].release()
         
         while True:
@@ -215,7 +228,7 @@ class TaskMaster:
                 self.lock["wait_q"].acquire()
                 for task in job['reduce_tasks']:
                     new_task = Task(task['task_id'], task['duration'], job_id, reducer=True)
-                self.wait_q.append(new_task)
+                    self.wait_q.append(new_task)
                 self.lock["wait_q"].release()
 
     #NOTE: Separate thread
@@ -241,6 +254,7 @@ class TaskMaster:
             worker_id = self.worker_r_index[task_info["identifier"]]
             self.lock["workers"].acquire()
             self.workers[worker_id].free += 1
+            self.workers[worker_id].used -= 1
             self.lock["workers"].release()
 
             # Remove it from the running queue
@@ -313,6 +327,7 @@ class TaskMaster:
             # Wait a second
             time.sleep(1)
 
+        # ==================== START LOGGING ========================
             # Debug log information
             # Not required for log analysis
             with open('main.log', 'a') as wire:
@@ -336,6 +351,16 @@ class TaskMaster:
                     print(v, file=wire)
                 self.lock["running_q"].release()
                 print("========================================", file=wire)
+
+            # log worker load information
+            self.lock["workers"].acquire()
+            # No lock for this as no other thread accesses it
+            with open(self.w_log, "a") as wire:
+                for worker in self.workers.values():
+                    print(f"{worker.w_id} - {worker.used}", file=wire)
+            self.lock["workers"].release()
+                    
+        # ==================== STOP LOGGING ========================
 
             # Wait if no tasks are ready
             self.lock["ready_q"].acquire()
@@ -387,11 +412,14 @@ def main():
         pass
     
     # Clear the general log files
-    with open('task.log', 'w') as _:
-        pass
+    with open('task.log', 'w') as wire:
+        # Write down the log file format
+        wire.write("# task-id - completion time in seconds (float)\n")
 
-    with open('job.log', 'w') as _:
-        pass
+
+    with open('job.log', 'w') as wire:
+        # Write down the log file format
+        wire.write("# job-id - completion time in seconds (float)\n")
 
     with open('min-config.json') as red:
         config = json.load(red)
