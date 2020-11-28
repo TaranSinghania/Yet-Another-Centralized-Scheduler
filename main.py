@@ -303,6 +303,8 @@ class TaskMaster:
             # Wait a second
             time.sleep(1)
 
+            # Debug log information
+            # Not required for log analysis
             with open('main.log', 'a') as wire:
                 print("========================================", file=wire)
                 self.lock["ready_q"].acquire()
@@ -369,8 +371,16 @@ def main():
     # Create a taskmaster object
     # Parse the config and pass that as an option
     # Run the three threads of taskmaster
-    # Clear the log file
+
+    # Clear the debug log file
     with open('main.log', 'w') as _:
+        pass
+    
+    # Clear the general log files
+    with open('task.log', 'w') as _:
+        pass
+
+    with open('job.log', 'w') as _:
         pass
 
     with open('min-config.json') as red:
