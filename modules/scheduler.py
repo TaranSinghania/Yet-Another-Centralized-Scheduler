@@ -2,6 +2,7 @@
 Scheduler classes
 Subclassed to maintain common interface
 """
+import time
 import random
 
 
@@ -72,8 +73,17 @@ class LeastLoaded(Scheduler):
     """
     name = "LeastLoaded"
     def select(self, workers: list):
-        condition = True
-        while condition:
-            pass
-        else:
-            return -1
+        max_slots = -1
+        max_idx = -1
+        while 1:
+            for i in range(len(workers)):
+                # Update max free slots available and the index of worker
+                if workers[i].free > 0 and workers[i].free > max_slots:
+                    max_slots = workers[i].free
+                    max_idx = i
+
+            # If no slots are free sleep for one second
+            if max_idx == -1:
+                return -1
+            else:
+                return max_idx

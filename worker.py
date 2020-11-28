@@ -18,7 +18,7 @@ import json
 import time
 import threading
 
-import utility
+import modules.utility as utility
 
 HOST = "localhost"
 MASTER_PORT = 5001
@@ -135,7 +135,7 @@ class Worker:
 
 def main():
     # Clear the log file
-    with open('worker.log', 'w') as _:
+    with open('logs/worker.log', 'w') as _:
         pass
 
     listen_port = 4000 #Default

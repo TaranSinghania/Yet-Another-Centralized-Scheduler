@@ -14,14 +14,15 @@ Deadlock prevention method:
 Each thread holds max one lock at any given time
 To increase readability replace acquire-release with a `with` block where possible
 """
+import sys
 import uuid
 import json
 import socket
 import time
 import threading
 
-import scheduler
-import utility
+import modules.scheduler as scheduler
+import modules.utility as utility
 
 
 HOST = "localhost"
@@ -35,6 +36,14 @@ WORKER_SIDE_ADDR = (HOST, WORKER_SIDE_PORT)
 # Task types, can be any arbitrary numbers
 MAPPER = 420
 REDUCER = 51
+
+# Check for command line arguments
+if(len(sys.argv) < 3):
+        print("Incorrect Usage. Correct Usage: Master.py <path to config file> <Scheduling algorithm - R|RR|LL>")
+        sys.exit()
+
+path_to_config_file = sys.argv[1] # Read path to config file
+scheduling_algorithm = sys.argv[2] # Read scheduling algo to be used
 
 
 class Task:
@@ -272,7 +281,7 @@ class TaskMaster:
                 print("Task complete", task.hash)
 
             # Log task completion
-            with open("logs/task.log", 'a') as wire:
+            with open("logs/task" + scheduling_algorithm + ".log", 'a') as wire:
                 print(f"{task.task_id} - {task.completion_time}", file=wire)
 
             # Update job
@@ -311,7 +320,7 @@ class TaskMaster:
 
                 # Log job completion
                 total = self.jobs[job]["completed"] - self.jobs[job]["arrival"] 
-                with open('logs/job.log', 'a') as wire:
+                with open('logs/job' + scheduling_algorithm + '.log', 'a') as wire:
                     print(f"{job} - {total}", file=wire)
                 
                 # Don't need the job anymore
@@ -432,20 +441,25 @@ def main():
         pass
     
     # Clear the general log files
-    with open('logs/task.log', 'w') as wire:
+    with open('logs/task' + scheduling_algorithm + '.log', 'w') as wire:
         # Write down the log file format
         wire.write("# task-id - completion time in seconds (float)\n")
 
-    with open('logs/job.log', 'w') as wire:
+    with open('logs/job' + scheduling_algorithm + '.log', 'w') as wire:
         # Write down the log file format
         wire.write("# job-id - completion time in seconds (float)\n")
 
-    with open('min-config.json') as red:
+    with open(path_to_config_file) as red:
         config = json.load(red)
     
-    #NOTE: Set the scheduler here
-    spider_man = TaskMaster(scheduler.RoundRobin(), config)
-
+    # Choosing the scheduler to use
+    if scheduling_algorithm == "RR":
+        spider_man = TaskMaster(scheduler.RoundRobin(), config)
+    elif scheduling_algorithm == "LL":
+        spider_man = TaskMaster(scheduler.LeastLoaded(), config)
+    else:
+         spider_man = TaskMaster(scheduler.Random(), config)
+       
     for worker in spider_man.workers.values():
         print(worker)
 
