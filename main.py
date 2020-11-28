@@ -251,10 +251,14 @@ class TaskMaster:
             self.lock["running_q"].release()
             # Task is read-only from here on
 
-            # Log info about task
+            # Debug log info about task
             self.lock["stdout"].acquire()
             print("Task complete", task.hash)
             self.lock["stdout"].release()
+
+            # Log task completion
+            with open("task.log", 'a') as wire:
+                print(f"{task.task_id} - {task.completion_time}", file=wire)
 
             # Update job
             job = task.job_id
@@ -289,15 +293,21 @@ class TaskMaster:
             reduce_done = (self.jobs[job]["no_reducers"] == 0)
             if reduce_done:
                 self.jobs[job]["completed"] = time.time()
-                # Log info about job completion
+                # Debug log info about job completion
                 print("Job complete")
                 print(self.jobs[job])
+
+                # Log job completion
+                total = self.jobs[job]["completed"] - self.jobs[job]["arrival"] 
+                with open('job.log', 'a') as wire:
+                    print(f"{job} - {total}", file=wire)
             self.lock["jobs"].release()
     
     #NOTE: Separate thread
     def schedule(self):
         # Send tasks to workers
         # Move tasks from ready to running
+        # Debug logs are performed in this file as there is no socket blocking
         
         while True:
             # Wait a second
