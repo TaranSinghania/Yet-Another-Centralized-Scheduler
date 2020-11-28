@@ -102,7 +102,7 @@ class Worker:
         # Attach a hash to all messages sent to this worker
         # This way, when the message comes back in the taskmaster we know which
         # Worker sent the message. Useful if all worker programs are identical
-        data = {"identifier":self.hash, "task_hash":hash(task), "duration":task.duration}
+        data = {"identifier":self.hash, "task_hash":task.hash, "duration":task.duration}
         payload = json.dumps(data)
 
         # Private communication channel
@@ -209,7 +209,7 @@ class TaskMaster:
                 self.lock["ready_q"].acquire()
                 for task in job['reduce_tasks']:
                     new_task = Task(task['task_id'], task['duration'], job_id, reducer=True)
-                self.ready_q.append(new_task)
+                    self.ready_q.append(new_task)
                 self.lock["ready_q"].release()
             else:
                 self.lock["wait_q"].acquire()
@@ -251,6 +251,11 @@ class TaskMaster:
             self.lock["running_q"].release()
             # Task is read-only from here on
 
+            # Log info about task
+            self.lock["stdout"].acquire()
+            print("Task complete", task.hash)
+            self.lock["stdout"].release()
+
             # Update job
             job = task.job_id
             self.lock["jobs"].acquire()
@@ -285,9 +290,9 @@ class TaskMaster:
             if reduce_done:
                 self.jobs[job]["completed"] = time.time()
                 # Log info about job completion
+                print("Job complete")
+                print(self.jobs[job])
             self.lock["jobs"].release()
-            
-            # Log info about task
     
     #NOTE: Separate thread
     def schedule(self):
@@ -297,6 +302,29 @@ class TaskMaster:
         while True:
             # Wait a second
             time.sleep(1)
+
+            with open('main.log', 'a') as wire:
+                print("========================================", file=wire)
+                self.lock["ready_q"].acquire()
+                print("READY_QUEUE", file=wire)
+                for task in self.ready_q:
+                    print(task, file=wire)
+                self.lock["ready_q"].release()
+
+                self.lock["wait_q"].acquire()
+                print("WAIT_QUEUE", file=wire)
+                for task in self.wait_q:
+                    print(task, file=wire)
+                self.lock["wait_q"].release()
+                
+                self.lock["running_q"].acquire()
+                print("RUNNING_QUEUE", file=wire)
+                for k, v in self.running_q.items():
+                    print(k, file=wire)
+                    print(v, file=wire)
+                self.lock["running_q"].release()
+                print("========================================", file=wire)
+
             # Wait if no tasks are ready
             self.lock["ready_q"].acquire()
             if not self.ready_q:
@@ -324,7 +352,7 @@ class TaskMaster:
 
             # Move the task to the running queue
             self.lock["running_q"].acquire()
-            self.running_q[hash(task)] = task
+            self.running_q[task.hash] = task
             self.lock["running_q"].release()
 
             # Allocate the task to the worker, let it do the comms
@@ -341,6 +369,9 @@ def main():
     # Create a taskmaster object
     # Parse the config and pass that as an option
     # Run the three threads of taskmaster
+    # Clear the log file
+    with open('main.log', 'w') as _:
+        pass
 
     with open('min-config.json') as red:
         config = json.load(red)
@@ -349,9 +380,9 @@ def main():
         print(k, v)
 
     # Create separate threads
-    client_side_thread = threading.Thread(spider_man.serve)
-    scheduler_thread = threading.Thread(spider_man.schedule)
-    worker_side_thread = threading.Thread(spider_man.listen)
+    client_side_thread = threading.Thread(target=spider_man.serve)
+    scheduler_thread = threading.Thread(target=spider_man.schedule)
+    worker_side_thread = threading.Thread(target=spider_man.listen)
     threads = [client_side_thread, scheduler_thread, worker_side_thread]
 
     for thread in threads:

@@ -1,0 +1,144 @@
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+Task:0_M0 of Job0 with duration:4
+Task:0_M1 of Job0 with duration:3
+Task:0_M2 of Job0 with duration:1
+WAIT_QUEUE
+Task:0_R0 of Job0 with duration:4
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+Task:0_M0 of Job0 with duration:4
+Task:0_M1 of Job0 with duration:3
+WAIT_QUEUE
+Task:0_R0 of Job0 with duration:4
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+Task:0_M0 of Job0 with duration:4
+WAIT_QUEUE
+Task:0_R0 of Job0 with duration:4
+RUNNING_QUEUE
+7e4836024c0d423aa2e7e94511c9418f0_M1
+Task:0_M1 of Job0 with duration:3
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+Task:0_R0 of Job0 with duration:4
+RUNNING_QUEUE
+7e4836024c0d423aa2e7e94511c9418f0_M1
+Task:0_M1 of Job0 with duration:3
+e771ce40003b4335a6f5a4a907a7320a0_M0
+Task:0_M0 of Job0 with duration:4
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+Task:0_R0 of Job0 with duration:4
+RUNNING_QUEUE
+e771ce40003b4335a6f5a4a907a7320a0_M0
+Task:0_M0 of Job0 with duration:4
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+Task:0_R0 of Job0 with duration:4
+RUNNING_QUEUE
+e771ce40003b4335a6f5a4a907a7320a0_M0
+Task:0_M0 of Job0 with duration:4
+========================================
+========================================
+READY_QUEUE
+Task:0_R0 of Job0 with duration:4
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+6bb6d94d0b0b4075a115715b28fa7fcb0_R0
+Task:0_R0 of Job0 with duration:4
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+6bb6d94d0b0b4075a115715b28fa7fcb0_R0
+Task:0_R0 of Job0 with duration:4
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+6bb6d94d0b0b4075a115715b28fa7fcb0_R0
+Task:0_R0 of Job0 with duration:4
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
+========================================
+READY_QUEUE
+WAIT_QUEUE
+RUNNING_QUEUE
+========================================
