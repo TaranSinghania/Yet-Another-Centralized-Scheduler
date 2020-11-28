@@ -12,7 +12,6 @@ What's been tried:
 * Finished Log Analysis
 
 Next on list:
-* To schedule multiple jobs at once [Important]
 * Add selective waiting for scheduling
 
 How to use:
