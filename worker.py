@@ -59,14 +59,12 @@ class Worker:
             task = json.loads(data)
             # Possible BUG - case when task has 0 duration
             # Add task to execution pool
-            self.lock["pool"].acquire()
-            self.pool.append(task)
-            self.lock["pool"].release()
+            with self.lock["pool"]:
+                self.pool.append(task)
 
-            self.lock["stdout"].acquire()
-            print("received task")
-            print(task)
-            self.lock["stdout"].release()
+            with self.lock["stdout"]:
+                print("received task")
+                print(task)
 
     # NOTE: separate thread
     def execute(self):

@@ -20,7 +20,7 @@ class Scheduler:
 
 class Random(Scheduler):
     """
-    Randomly selects a worker with a free slot
+    Randomly select a worker with a free slot
     """
     name = "RandomScheduler"
     def select(self, workers: list):
@@ -35,4 +35,28 @@ class Random(Scheduler):
             yet_to_try.pop(index)
         else:
             # Could not find a free slot in any worker
+            return -1
+
+
+class RoundRobin(Scheduler):
+    """
+    Pick machines in a circular order
+    Assume that the list of workers passed is the same
+    """
+    name = "RoundRobin"
+    def __init__(self):
+        # What worker was picked the last time? Go on from there
+        self.prev = -1
+
+    def select(self, workers: list):
+        n = len(workers)
+        if self.prev == -1:
+            self.start = 0
+        else:
+            self.start = (self.prev + 1) % n
+        # How many nodes to search before giving up
+        counter = n
+        while counter > 0:
+            pass
+        else:
             return -1

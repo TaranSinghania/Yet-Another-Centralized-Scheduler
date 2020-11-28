@@ -181,9 +181,9 @@ class TaskMaster:
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.bind(CLIENT_SIDE_ADDR)
         server_sock.listen()
-        self.lock["stdout"].acquire()
-        print("LISTENING FOR REQUESTS")
-        self.lock["stdout"].release()
+
+        with self.lock["stdout"]:
+            print("LISTENING FOR REQUESTS")
         
         while True:
             # Receive a request
@@ -252,10 +252,9 @@ class TaskMaster:
             
             # Update it's worker's slots
             worker_id = self.worker_r_index[task_info["identifier"]]
-            self.lock["workers"].acquire()
-            self.workers[worker_id].free += 1
-            self.workers[worker_id].used -= 1
-            self.lock["workers"].release()
+            with self.lock["workers"]:
+                self.workers[worker_id].free += 1
+                self.workers[worker_id].used -= 1
 
             # Remove it from the running queue
             self.lock["running_q"].acquire()
@@ -266,9 +265,8 @@ class TaskMaster:
             # Task is read-only from here on
 
             # Debug log info about task
-            self.lock["stdout"].acquire()
-            print("Task complete", task.hash)
-            self.lock["stdout"].release()
+            with self.lock["stdout"]:
+                print("Task complete", task.hash)
 
             # Log task completion
             with open("task.log", 'a') as wire:
@@ -290,17 +288,14 @@ class TaskMaster:
             if map_done and not started_reducers:
                 # Move all reducers from the waiting queue to the ready queue
                 reducers = list(filter(lambda x: x.job_id == job, self.wait_q))
-                self.lock["wait_q"].acquire()
-                self.wait_q = [x for x in self.wait_q if x not in reducers]
-                self.lock["wait_q"].release()
+                with self.lock["wait_q"]:
+                    self.wait_q = [x for x in self.wait_q if x not in reducers]
                 
-                self.lock["ready_q"].acquire()
-                self.ready_q.extend(reducers)
-                self.lock["ready_q"].release()
+                with self.lock["ready_q"]:
+                    self.ready_q.extend(reducers)
                 
-                self.lock["jobs"].acquire()
-                self.jobs[job]["started_reducers"] = True
-                self.lock["jobs"].release()
+                with self.lock["jobs"]:
+                    self.jobs[job]["started_reducers"] = True
             
             # If all the reducers have finished
             self.lock["jobs"].acquire()
@@ -346,8 +341,7 @@ class TaskMaster:
                 
                 self.lock["running_q"].acquire()
                 print("RUNNING_QUEUE", file=wire)
-                for k, v in self.running_q.items():
-                    print(k, file=wire)
+                for v in self.running_q.values():
                     print(v, file=wire)
                 self.lock["running_q"].release()
                 print("========================================", file=wire)
@@ -377,29 +371,26 @@ class TaskMaster:
             workers_list = list(self.workers.values())
             index = self.scheduler.select(workers_list)
             self.lock["workers"].release()
+
             if index == -1:
                 continue
             # Update variables if succesful
-            self.lock["ready_q"].acquire()
-            task = self.ready_q.pop()
-            self.lock["ready_q"].release()
+            with self.lock["ready_q"]:
+                task = self.ready_q.pop()
 
             # Verify no lock required for this
             worker = workers_list[index]
 
             # Move the task to the running queue
-            self.lock["running_q"].acquire()
-            self.running_q[task.hash] = task
-            self.lock["running_q"].release()
+            with self.lock["running_q"]:
+                self.running_q[task.hash] = task
 
             # Allocate the task to the worker, let it do the comms
-            self.lock["workers"].acquire()
-            self.workers[worker.w_id].allocate(task)
-            self.lock["workers"].release()
+            with self.lock["workers"]:
+                self.workers[worker.w_id].allocate(task)
 
-            self.lock["stdout"].acquire()
-            print("ALLOCATED", task.task_id, "TO", worker.w_id)
-            self.lock["stdout"].release()
+            with self.lock["stdout"]:
+                print("ALLOCATED", task.task_id, "TO", worker.w_id)
 
 
 def main():
