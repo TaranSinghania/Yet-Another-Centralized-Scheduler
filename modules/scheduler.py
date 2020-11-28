@@ -24,7 +24,7 @@ class Random(Scheduler):
     """
     Randomly select a worker with a free slot
     """
-    name = "RandomScheduler"
+    name = "Random"
     def select(self, workers: list, lock: threading.Lock):
         # If a worker is not free remove from random selection
         lock.acquire()
@@ -92,7 +92,9 @@ class LeastLoaded(Scheduler):
 
             # If no slots are free, sleep for one second
             if max_idx == -1:
+                lock.release()
                 time.sleep(1)
+                lock.acquire()
             else:
                 lock.release()
                 return max_idx

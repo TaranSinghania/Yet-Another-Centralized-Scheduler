@@ -119,7 +119,7 @@ class plotTime:
         for worker in self.time_dict:
             y_ax = self.time_dict[worker]
             x_ax = self.timestamps
-            plt.plot(x_ax, y_ax, label=worker)
+            plt.plot(x_ax, y_ax, label=worker, marker='o')
         
         plt.xlabel("Timestamp")
         plt.ylabel("Number of slots being used")
