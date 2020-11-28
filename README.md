@@ -17,4 +17,6 @@ How to use:
 
 ## Notes
 - Because the scheduler allocates only one task at a time the worker slots are
-being under-utilized
+being under-utilized  
+- All logs go to the logs folder where they are ignored  
+- For logs which need to be analyzed use the perma-logs foler

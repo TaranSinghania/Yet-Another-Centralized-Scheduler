@@ -168,11 +168,14 @@ class TaskMaster:
         self.lock = {item: threading.Lock() for item in lockable_items}
 
         # The worker-load log file
-        self.w_log = scheduler.name + "Worker.log"
+        self.w_log = "logs/" + scheduler.name + "Worker.log"
         with open(self.w_log, 'w') as wire:
             # Write the log file format
             # Worker-id - number of tasks
-            wire.write("# Worker-id - Number of tasks running\n")
+            wire.write("# Worker-id, Number of tasks running, Timestamp\n")
+        
+        # TM timer
+        self.timer = time.time()
     
     #NOTE: Separate thread
     def serve(self):
@@ -269,7 +272,7 @@ class TaskMaster:
                 print("Task complete", task.hash)
 
             # Log task completion
-            with open("task.log", 'a') as wire:
+            with open("logs/task.log", 'a') as wire:
                 print(f"{task.task_id} - {task.completion_time}", file=wire)
 
             # Update job
@@ -308,8 +311,12 @@ class TaskMaster:
 
                 # Log job completion
                 total = self.jobs[job]["completed"] - self.jobs[job]["arrival"] 
-                with open('job.log', 'a') as wire:
+                with open('logs/job.log', 'a') as wire:
                     print(f"{job} - {total}", file=wire)
+                
+                # Don't need the job anymore
+                del self.jobs[job]
+
             self.lock["jobs"].release()
     
     #NOTE: Separate thread
@@ -319,43 +326,6 @@ class TaskMaster:
         # Debug logs are performed in this file as there is no socket blocking
         
         while True:
-            # Wait a second
-            
-
-        # ==================== START LOGGING ========================
-            # Debug log information
-            # Not required for log analysis
-            with open('main.log', 'a') as wire:
-                print("========================================", file=wire)
-                self.lock["ready_q"].acquire()
-                print("READY_QUEUE", file=wire)
-                for task in self.ready_q:
-                    print(task, file=wire)
-                self.lock["ready_q"].release()
-
-                self.lock["wait_q"].acquire()
-                print("WAIT_QUEUE", file=wire)
-                for task in self.wait_q:
-                    print(task, file=wire)
-                self.lock["wait_q"].release()
-                
-                self.lock["running_q"].acquire()
-                print("RUNNING_QUEUE", file=wire)
-                for v in self.running_q.values():
-                    print(v, file=wire)
-                self.lock["running_q"].release()
-                print("========================================", file=wire)
-
-            # log worker load information
-            self.lock["workers"].acquire()
-            # No lock for this as no other thread accesses it
-            with open(self.w_log, "a") as wire:
-                for worker in self.workers.values():
-                    print(f"{worker.w_id} - {worker.used}", file=wire)
-            self.lock["workers"].release()
-                    
-        # ==================== STOP LOGGING ========================
-
             # Wait if no tasks are ready
             self.lock["ready_q"].acquire()
             if not self.ready_q:
@@ -394,6 +364,63 @@ class TaskMaster:
             with self.lock["stdout"]:
                 print("ALLOCATED", task.task_id, "TO", worker.w_id)
 
+    #NOTE: Separate thread
+    def worker_logger(self, frequency=1):
+        # Log worker loads
+        while True:
+            # Log only while jobs still in progress
+            if not self.jobs:
+                continue
+
+            # Local timer
+            local_timer = round(time.time() - self.timer, 5)
+
+            # log worker load information
+            self.lock["workers"].acquire()
+            # No lock for this as no other thread accesses it
+            with open(self.w_log, "a") as wire:
+                for worker in self.workers.values():
+                    print(f"{worker.w_id},{worker.used},{local_timer}", file=wire)
+            self.lock["workers"].release()
+
+            # Wait for provided frequency
+            # Reduce default parameter for more accurate logs
+            time.sleep(frequency)
+
+    #NOTE: Separate thread
+    def debug_logger(self):
+        # Log state of queues for debugging
+        while True:
+            # Don't log when there are no jobs
+            if not self.jobs:
+                continue
+
+            # Not required for log analysis
+            with open('logs/main.log', 'a') as wire:
+                print("========================================", file=wire)
+                self.lock["ready_q"].acquire()
+                print("READY_QUEUE", file=wire)
+                for task in self.ready_q:
+                    print(task, file=wire)
+                self.lock["ready_q"].release()
+
+                self.lock["wait_q"].acquire()
+                print("WAIT_QUEUE", file=wire)
+                for task in self.wait_q:
+                    print(task, file=wire)
+                self.lock["wait_q"].release()
+                
+                self.lock["running_q"].acquire()
+                print("RUNNING_QUEUE", file=wire)
+                for v in self.running_q.values():
+                    print(v, file=wire)
+                self.lock["running_q"].release()
+                print("========================================", file=wire)
+            # Don't print too often
+            time.sleep(1)
+    # End logger
+# End class
+
 
 def main():
     # Create a taskmaster object
@@ -401,30 +428,39 @@ def main():
     # Run the three threads of taskmaster
 
     # Clear the debug log file
-    with open('main.log', 'w') as _:
+    with open('logs/main.log', 'w'):
         pass
     
     # Clear the general log files
-    with open('task.log', 'w') as wire:
+    with open('logs/task.log', 'w') as wire:
         # Write down the log file format
         wire.write("# task-id - completion time in seconds (float)\n")
 
-
-    with open('job.log', 'w') as wire:
+    with open('logs/job.log', 'w') as wire:
         # Write down the log file format
         wire.write("# job-id - completion time in seconds (float)\n")
 
-    with open('config.json') as red:
+    with open('min-config.json') as red:
         config = json.load(red)
+    
+    #NOTE: Set the scheduler here
     spider_man = TaskMaster(scheduler.RoundRobin(), config)
-    for k, v in spider_man.workers.items():
-        print(k, v)
+
+    for worker in spider_man.workers:
+        print(worker)
 
     # Create separate threads
     client_side_thread = threading.Thread(target=spider_man.serve)
     scheduler_thread = threading.Thread(target=spider_man.schedule)
     worker_side_thread = threading.Thread(target=spider_man.listen)
-    threads = [client_side_thread, scheduler_thread, worker_side_thread]
+    worker_logger_thread = threading.Thread(target=spider_man.worker_logger)
+    debug_logger_thread = threading.Thread(target=spider_man.debug_logger)
+
+    # Collect them in a pool like structure
+    threads = [
+        client_side_thread, scheduler_thread, worker_side_thread,
+        worker_logger_thread, debug_logger_thread
+    ]
 
     for thread in threads:
         thread.start()

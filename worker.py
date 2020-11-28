@@ -73,8 +73,10 @@ class Worker:
             # Give time for changes, fake execution
             time.sleep(1)
 
+            # This logging can be here as the thread is required to sleep
+            # and therefore performs periodic logging automatically
             self.lock["pool"].acquire()
-            with open('worker.log', 'a') as wire:
+            with open('logs/worker.log', 'a') as wire:
                 print(self.pool, file=wire)
                 print("============================================", file=wire)
             self.lock["pool"].release()
