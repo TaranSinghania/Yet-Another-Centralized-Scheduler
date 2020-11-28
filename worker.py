@@ -137,11 +137,11 @@ def main():
         pass
 
     listen_port = 4000 #Default
-    if (len(sys.argv) < 2):
-        print("Incorrect Usage. Correct Usage: worker.py <port number>")
+    if (len(sys.argv) < 3):
+        print("Incorrect Usage. Correct Usage: worker.py <port number> <worker ID>")
         print("Continuing with port: ", listen_port)
 
-    bob = Worker(listen_port)
+    bob = Worker(sys.argv[1])
     receiver_thread = threading.Thread(target=bob.receive)
     executor_thread = threading.Thread(target=bob.execute)
 
