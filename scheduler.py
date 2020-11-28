@@ -51,12 +51,16 @@ class RoundRobin(Scheduler):
     def select(self, workers: list):
         n = len(workers)
         if self.prev == -1:
-            self.start = 0
+            start = 0
         else:
-            self.start = (self.prev + 1) % n
+            start = (self.prev + 1) % n
         # How many nodes to search before giving up
         counter = n
         while counter > 0:
-            pass
+            if workers[start].free > 0:
+                self.prev = start
+                return start
+            start = (start + 1) % n
+            counter -= 1
         else:
             return -1

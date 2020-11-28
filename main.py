@@ -119,7 +119,7 @@ class Worker:
     
     def __repr__(self):
         # For debugging
-        return f"Worker:{self.w_id} at {self.port} with {self.free}"
+        return f"Worker:{self.w_id} at {self.port} with {self.free} slots"
 
 
 class TaskMaster:
@@ -414,7 +414,7 @@ def main():
 
     with open('min-config.json') as red:
         config = json.load(red)
-    spider_man = TaskMaster(scheduler.Random(), config)
+    spider_man = TaskMaster(scheduler.RoundRobin(), config)
     for k, v in spider_man.workers.items():
         print(k, v)
 
