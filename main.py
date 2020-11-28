@@ -320,7 +320,7 @@ class TaskMaster:
         
         while True:
             # Wait a second
-            time.sleep(1)
+            
 
         # ==================== START LOGGING ========================
             # Debug log information
@@ -360,6 +360,7 @@ class TaskMaster:
             self.lock["ready_q"].acquire()
             if not self.ready_q:
                 self.lock["ready_q"].release()
+                time.sleep(0.2)
                 continue
             # This lock will be released only once
             self.lock["ready_q"].release()
@@ -373,6 +374,7 @@ class TaskMaster:
             self.lock["workers"].release()
 
             if index == -1:
+                time.sleep(0.2)
                 continue
             # Update variables if succesful
             with self.lock["ready_q"]:
@@ -412,7 +414,7 @@ def main():
         # Write down the log file format
         wire.write("# job-id - completion time in seconds (float)\n")
 
-    with open('min-config.json') as red:
+    with open('config.json') as red:
         config = json.load(red)
     spider_man = TaskMaster(scheduler.RoundRobin(), config)
     for k, v in spider_man.workers.items():

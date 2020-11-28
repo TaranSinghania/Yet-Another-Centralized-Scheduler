@@ -10,6 +10,7 @@ Use the utility module for all communications
 ! Start all workers and master before running this file
 """
 import sys
+import matplotlib.pyplot as plt
 
 
 class stats:
@@ -29,6 +30,7 @@ class stats:
             median = self.times[self.len_times//2]
 
         return median
+
 
 class calc_time:
     def __init__(self, parse_file):
@@ -54,6 +56,12 @@ class calc_time:
         print("The median ", self.file[:-4], " completion time is: ", median, " seconds")
         print("\n")
 
+
+def plot(parse_file):
+    with open(parse_file, 'r') as f:
+        logs = f.readlines()[1:]
+    
+    time_dict = {}
 
 def main():
 

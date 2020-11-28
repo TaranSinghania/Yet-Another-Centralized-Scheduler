@@ -141,7 +141,9 @@ def main():
         print("Incorrect Usage. Correct Usage: worker.py <port number> <worker ID>")
         print("Continuing with port: ", listen_port)
 
-    bob = Worker(sys.argv[1])
+    listen_port = int(sys.argv[1]) 
+    
+    bob = Worker(listen_port)
     receiver_thread = threading.Thread(target=bob.receive)
     executor_thread = threading.Thread(target=bob.execute)
 
