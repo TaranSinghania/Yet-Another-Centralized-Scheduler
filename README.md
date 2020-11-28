@@ -10,8 +10,6 @@ What's been tried:
 * Place multiple workers, use a shell script
 * Add LL scheduler
 * Finished Log Analysis
-
-Next on list:
 * Add selective waiting for scheduling
 
 How to use:
