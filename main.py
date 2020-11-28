@@ -4,6 +4,7 @@ Functions:
 * Listen for requests from the client
 * Send tasks to workers and track them
 * Schedule tasks to the worker  
+
 Communications between workers happens through JSON  
 Use the utility module for all communications  
 
@@ -49,15 +50,25 @@ class Task:
         
         self.is_last_map = ('last_mapper' in kwargs)
         self.is_last_task = ('last_task' in kwargs)
+
+        # Unique hash
+        self.hash = uuid.uuid4().hex
     
     def dispatch(self):
         self.dispatch_time = time.time()
         # Completion time will be obtained once processed by worker
         self.completion_time = 0
     
+    def arrive(self):
+        self.arrival_time = time.time()
+        self.completion_time = self.arrival_time - self.dispatch_time
+    
     # For debugging
     def __repr__(self):
         return f"Task:{self.task_id} of Job{self.job_id} with duration:{self.duration}"
+    
+    def __hash__(self):
+        return self.hash
 
 
 class Worker:
@@ -75,11 +86,7 @@ class Worker:
         # Create a socket to send data to the worker
         # Hash to prefix all communications with
         self.hash = uuid.uuid4().hex
-        # Private communication channel
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        WORK_SERV_ADDR = (HOST, port)
-        # Maintain connection all the time, BUG possible
-        self.sock.connect(WORK_SERV_ADDR)
+        self.WORK_SERV_ADDR = (HOST, port)
     
     def allocate(self, task: Task):
         # Send a message to the worker asking it to process this task
@@ -93,7 +100,12 @@ class Worker:
         # Worker sent the message. Useful if all worker programs are identical
         data = {"identifier":self.hash, "task_hash":hash(task), "duration":task.duration}
         payload = json.dumps(data)
-        utility.sock_send(self.sock, payload)
+
+        # Private communication channel
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(self.WORK_SERV_ADDR)
+        utility.sock_send(sock, payload)
+        sock.close()
     
     def __repr__(self):
         # For debugging
@@ -107,7 +119,7 @@ class TaskMaster:
     - The scheduling algorithm it's using
     - The task queues it maintains
     - The sockets it's using for listening
-    - The workers it has
+    - The workers it has in its configuration
     """
     def __init__(self, scheduler: scheduler.Scheduler, config):
         # An object of a sublclass of the Scheduler class
@@ -127,6 +139,12 @@ class TaskMaster:
         for worker in config["workers"]:
             new_worker = Worker(worker["worker_id"], worker["slots"], worker["port"])
             self.workers[new_worker.w_id] = new_worker
+        
+        # Reverse map workers, useful when listening for updates
+        # k:v -> worker_hash : worker id
+        # Updates must be performed on self.workers
+        # Read only object, lock not necessary
+        self.worker_r_index = {w.hash: w.id for w in self.workers.items()}
 
         # Lock while using
         self.jobs = {}
@@ -171,6 +189,9 @@ class TaskMaster:
                     self.ready_q.append(new_task)
                 else:
                     self.wait_q.append(new_task)
+            
+            # Indicate if the reducers have been started
+            self.jobs[job_id]["started_reducers"] = no_mappers
 
             break
 
@@ -188,7 +209,45 @@ class TaskMaster:
             # Update queues, some special conditions:
             # Last map -> Move reducers to waiting
             # Last reducer -> Log job completion
-            pass
+            
+            payload = utility.sock_recv(server_sock)
+            # Get the completed task's details
+            task_info = json.loads(payload)
+            
+            # Update it's worker's slots
+            worker_id = self.worker_r_index[task_info["identifier"]]
+            self.workers[worker_id].free += 1
+
+            # Remove it from the running queue
+            task = self.running_q[task_info["task_hash"]]
+            task.arrive()
+            del self.running_q[hash(task)]
+            # Task is read-only from here on
+
+            # Update job
+            job = task.job_id
+            if task.type == MAPPER:
+                self.jobs[job]["no_mappers"] -= 1
+            elif task.type == REDUCER:
+                self.jobs[job]["no_reducers"] -= 1
+            
+            # If all mappers have finished
+            map_done = (self.jobs[job]["no_mappers"] == 0)
+            started_reducers = self.jobs[job]["started_reducers"]
+            if map_done and not started_reducers:
+                # Move all reducers from the waiting queue to the ready queue
+                reducers = list(filter(lambda x: x.job_id == job, self.wait_q))
+                self.wait_q = [x for x in self.wait_q if x not in reducers]
+                self.ready_q.extend(reducers)
+                self.jobs[job]["started_reducers"] = True
+            
+            # If all the reducers have finished
+            reduce_done = (self.jobs[job]["no_reducers"] == 0)
+            if reduce_done:
+                self.jobs[job]["completed"] = time.time()
+                # Log info about job completion
+            
+            # Log info about task
     
     #NOTE: Separate thread
     def schedule(self):

@@ -9,6 +9,7 @@ def sock_recv(sock):
     # This socket is a server-side socket
     (clientsocket, address) = sock.accept()
     print("CONNECTED from", address)
+    # Must add true buffering later on
     data = clientsocket.recv(BUF_LEN)
     clientsocket.close()
     return data.decode()
