@@ -12,13 +12,13 @@ Add tasks to pool as they arrive
 At each second, reduce the duration of all tasks in the pool
 When any task has finished execution relay info to master
 """
+import sys
 import socket
 import json
 import time
 import threading
 
 import utility
-
 
 HOST = "localhost"
 MASTER_PORT = 5001
@@ -135,7 +135,13 @@ def main():
     # Clear the log file
     with open('worker.log', 'w') as _:
         pass
-    bob = Worker(4000)
+
+    listen_port = 4000 #Default
+    if (len(sys.argv) < 2):
+        print("Incorrect Usage. Correct Usage: worker.py <port number>")
+        print("Continuing with port: ", listen_port)
+
+    bob = Worker(listen_port)
     receiver_thread = threading.Thread(target=bob.receive)
     executor_thread = threading.Thread(target=bob.execute)
 
