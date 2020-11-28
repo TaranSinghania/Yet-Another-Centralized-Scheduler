@@ -7,8 +7,8 @@ BUF_LEN = 4096
 # Recevie a message through a socket
 def sock_recv(sock):
     # This socket is a server-side socket
-    (clientsocket, address) = sock.accept()
-    print("CONNECTED from", address)
+    (clientsocket, _) = sock.accept()
+    # print("CONNECTED from", address)
     # Must add true buffering later on
     data = clientsocket.recv(BUF_LEN)
     clientsocket.close()

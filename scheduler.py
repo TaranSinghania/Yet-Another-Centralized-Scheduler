@@ -20,7 +20,7 @@ class Random(Scheduler):
     """
     Randomly selects a worker with a free slot
     """
-    def select(self, workers: list, lock):
+    def select(self, workers: list):
         # If a worker is not free remove from random selection
         yet_to_try = workers.copy()
         while yet_to_try:

@@ -50,6 +50,8 @@ class Worker:
             # Possible BUG - task has 0 duration
             # Add task to execution pool
             self.pool.append(task)
+            print("received task")
+            print(task)
 
     # NOTE: separate thread
     def execute(self):
@@ -89,6 +91,7 @@ class Worker:
 
     def notify(self, task: dict):
         # Prepare payload to send
+        print("Done with task", task["task_hash"])
         payload = json.dumps(task)
 
         # Connect to master

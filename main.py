@@ -9,11 +9,15 @@ Communications between workers happens through JSON
 Use the utility module for all communications  
 
 ! Start all workers before running this file
+
+Deadlock prevention method:  
+Each thread holds max one lock at any given time
 """
 import uuid
 import json
 import socket
 import time
+import threading
 
 import scheduler
 import utility
@@ -47,12 +51,10 @@ class Task:
             self.type = MAPPER
         elif 'reducer'in kwargs:
             self.type = REDUCER
-        
-        self.is_last_map = ('last_mapper' in kwargs)
-        self.is_last_task = ('last_task' in kwargs)
 
-        # Unique hash
-        self.hash = uuid.uuid4().hex
+        # Unique identifier, extra protection with task_id
+        # Hash is misleading, replace with uuid
+        self.hash = uuid.uuid4().hex + str(task_id)
     
     def dispatch(self):
         self.dispatch_time = time.time()
@@ -67,8 +69,10 @@ class Task:
     def __repr__(self):
         return f"Task:{self.task_id} of Job{self.job_id} with duration:{self.duration}"
     
+    # Needs more research on collision probability, use self.hash instead
+    # uuid is reliable
     def __hash__(self):
-        return self.hash
+        return hash(self.hash)
 
 
 class Worker:
@@ -144,11 +148,18 @@ class TaskMaster:
         # k:v -> worker_hash : worker id
         # Updates must be performed on self.workers
         # Read only object, lock not necessary
-        self.worker_r_index = {w.hash: w.id for w in self.workers.items()}
+        self.worker_r_index = {w.hash: w.w_id for w in self.workers.values()}
 
         # Lock while using
         self.jobs = {}
         # Store id: arrival time
+
+        # Locks for all variables which can be accessed in different threads
+        lockable_items = [
+            "wait_q", "ready_q", "running_q", "workers", "jobs",
+            "stdin", "stdout"
+        ]
+        self.lock = {item: threading.Lock() for item in lockable_items}
     
     #NOTE: Separate thread
     def serve(self):
@@ -157,7 +168,9 @@ class TaskMaster:
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.bind(CLIENT_SIDE_ADDR)
         server_sock.listen()
+        self.lock["stdout"].acquire()
         print("ALL GOOD")
+        self.lock["stdout"].release()
         
         while True:
             # Receive a request
@@ -170,30 +183,40 @@ class TaskMaster:
             # Note down how many mapper and reducers are there
             # Once all mappers are done, this job's reducers can start
             # Once all reducers are done, this job can finish
+            self.lock["jobs"].acquire()
+            # ==================================================================
             self.jobs[job_id] = {"arrival": time.time()}
             self.jobs[job_id]["no_mappers"] = len(job['map_tasks'])
             self.jobs[job_id]["no_reducers"] = len(job['reduce_tasks'])
+
+            no_mappers = (len(job['map_tasks']) == 0)
+
+            # Indicate if the reducers have been started
+            self.jobs[job_id]["started_reducers"] = no_mappers
+            # ==================================================================
+            self.lock["jobs"].release()
             
             # Add each task to the ready queue
+            self.lock["ready_q"].acquire()
             for task in job['map_tasks']:
                 new_task = Task(task['task_id'], task['duration'], job_id, mapper=True)
                 self.ready_q.append(new_task)
-            
-            no_mappers = (len(job['map_tasks']) == 0)
+            self.lock["ready_q"].release()
             
             # Add each reduce task to the ready queue if there are no map tasks
             # else add them to the wait queue
-            for task in job['reduce_tasks']:
-                new_task = Task(task['task_id'], task['duration'], job_id, reducer=True)
-                if no_mappers:
-                    self.ready_q.append(new_task)
-                else:
-                    self.wait_q.append(new_task)
-            
-            # Indicate if the reducers have been started
-            self.jobs[job_id]["started_reducers"] = no_mappers
-
-            break
+            if no_mappers:
+                self.lock["ready_q"].acquire()
+                for task in job['reduce_tasks']:
+                    new_task = Task(task['task_id'], task['duration'], job_id, reducer=True)
+                self.ready_q.append(new_task)
+                self.lock["ready_q"].release()
+            else:
+                self.lock["wait_q"].acquire()
+                for task in job['reduce_tasks']:
+                    new_task = Task(task['task_id'], task['duration'], job_id, reducer=True)
+                self.wait_q.append(new_task)
+                self.lock["wait_q"].release()
 
     #NOTE: Separate thread
     def listen(self):
@@ -216,16 +239,21 @@ class TaskMaster:
             
             # Update it's worker's slots
             worker_id = self.worker_r_index[task_info["identifier"]]
+            self.lock["workers"].acquire()
             self.workers[worker_id].free += 1
+            self.lock["workers"].release()
 
             # Remove it from the running queue
+            self.lock["running_q"].acquire()
             task = self.running_q[task_info["task_hash"]]
             task.arrive()
-            del self.running_q[hash(task)]
+            del self.running_q[task.hash]
+            self.lock["running_q"].release()
             # Task is read-only from here on
 
             # Update job
             job = task.job_id
+            self.lock["jobs"].acquire()
             if task.type == MAPPER:
                 self.jobs[job]["no_mappers"] -= 1
             elif task.type == REDUCER:
@@ -234,18 +262,30 @@ class TaskMaster:
             # If all mappers have finished
             map_done = (self.jobs[job]["no_mappers"] == 0)
             started_reducers = self.jobs[job]["started_reducers"]
+            self.lock["jobs"].release()
+
             if map_done and not started_reducers:
                 # Move all reducers from the waiting queue to the ready queue
                 reducers = list(filter(lambda x: x.job_id == job, self.wait_q))
+                self.lock["wait_q"].acquire()
                 self.wait_q = [x for x in self.wait_q if x not in reducers]
+                self.lock["wait_q"].release()
+                
+                self.lock["ready_q"].acquire()
                 self.ready_q.extend(reducers)
+                self.lock["ready_q"].release()
+                
+                self.lock["jobs"].acquire()
                 self.jobs[job]["started_reducers"] = True
+                self.lock["jobs"].release()
             
             # If all the reducers have finished
+            self.lock["jobs"].acquire()
             reduce_done = (self.jobs[job]["no_reducers"] == 0)
             if reduce_done:
                 self.jobs[job]["completed"] = time.time()
                 # Log info about job completion
+            self.lock["jobs"].release()
             
             # Log info about task
     
@@ -258,21 +298,43 @@ class TaskMaster:
             # Wait a second
             time.sleep(1)
             # Wait if no tasks are ready
+            self.lock["ready_q"].acquire()
             if not self.ready_q:
+                self.lock["ready_q"].release()
                 continue
+            # This lock will be released only once
+            self.lock["ready_q"].release()
+
             # Try to allocate a task to a worker
+            self.lock["workers"].acquire()
+            # Once taken from the dictionary, are these values copies?
+            # If they are copies, the later locks on workers is not required
             workers_list = list(self.workers.values())
-            index = self.scheduler.select(workers_list, lock=None)
+            index = self.scheduler.select(workers_list)
+            self.lock["workers"].release()
             if index == -1:
                 continue
             # Update variables if succesful
+            self.lock["ready_q"].acquire()
             task = self.ready_q.pop()
+            self.lock["ready_q"].release()
+
+            # Verify no lock required for this
             worker = workers_list[index]
+
             # Move the task to the running queue
+            self.lock["running_q"].acquire()
             self.running_q[hash(task)] = task
+            self.lock["running_q"].release()
+
             # Allocate the task to the worker, let it do the comms
+            self.lock["workers"].acquire()
             self.workers[worker.w_id].allocate(task)
+            self.lock["workers"].release()
+
+            self.lock["stdout"].acquire()
             print("ALLOCATED", task.task_id, "TO", worker.w_id)
+            self.lock["stdout"].release()
 
 
 def main():
@@ -285,18 +347,19 @@ def main():
     spider_man = TaskMaster(scheduler.Random(), config)
     for k, v in spider_man.workers.items():
         print(k, v)
-    
-    spider_man.serve()
 
-    print("READY")
-    for task in spider_man.ready_q:
-        print(task)
+    # Create separate threads
+    client_side_thread = threading.Thread(spider_man.serve)
+    scheduler_thread = threading.Thread(spider_man.schedule)
+    worker_side_thread = threading.Thread(spider_man.listen)
+    threads = [client_side_thread, scheduler_thread, worker_side_thread]
+
+    for thread in threads:
+        thread.start()
     
-    print("WAITING")
-    for task in spider_man.wait_q:
-        print(task)
-    
-    spider_man.schedule()
+    # Loop till finish
+    for thread in threads:
+        thread.join()
 
 
 if __name__ == "__main__":
