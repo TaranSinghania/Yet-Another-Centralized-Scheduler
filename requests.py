@@ -15,7 +15,6 @@ def create_job_request(job_id):
 	for i in range(0,number_of_reduce_tasks):
 		reduce_task={"task_id":job_id+"_R"+str(i),"duration":random.randrange(1,5)}
 		job_request["reduce_tasks"].append(reduce_task)
-	print(job_request)
 	return job_request
 
 def send_request(job_request):
@@ -52,6 +51,3 @@ if __name__ == '__main__':
 		send_request(job_request)
 		last_request_time=time.time()
 		request_number+=1
-
-
-
