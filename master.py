@@ -39,8 +39,8 @@ REDUCER = 51
 
 # Check for command line arguments
 if(len(sys.argv) < 3):
-        print("Incorrect Usage. Correct Usage: Master.py <path to config file> <Scheduling algorithm - R|RR|LL>")
-        sys.exit()
+    print("Incorrect Usage. Correct Usage: Master.py <path to config file> <Scheduling algorithm - R|RR|LL>")
+    sys.exit()
 
 path_to_config_file = sys.argv[1] # Read path to config file
 scheduling_algorithm = sys.argv[2] # Read scheduling algo to be used
@@ -345,12 +345,12 @@ class TaskMaster:
             self.lock["ready_q"].release()
 
             # Try to allocate a task to a worker
-            self.lock["workers"].acquire()
+            
             # Once taken from the dictionary, are these values copies?
             # If they are copies, the later locks on workers is not required
             workers_list = list(self.workers.values())
-            index = self.scheduler.select(workers_list)
-            self.lock["workers"].release()
+            workers_list.sort(key=lambda x: x.w_id)
+            index = self.scheduler.select(workers_list, self.lock["workers"])
 
             if index == -1:
                 time.sleep(0.2)
