@@ -214,10 +214,10 @@ class TaskMaster:
             self.jobs[job_id]["no_mappers"] = len(job['map_tasks'])
             self.jobs[job_id]["no_reducers"] = len(job['reduce_tasks'])
 
-            no_mappers = (len(job['map_tasks']) == 0)
+            mapper_not_exist = (len(job['map_tasks']) == 0)
 
             # Indicate if the reducers have been started
-            self.jobs[job_id]["started_reducers"] = no_mappers
+            self.jobs[job_id]["started_reducers"] = mapper_not_exist
             # ==================================================================
             self.lock["jobs"].release()
             
@@ -230,7 +230,7 @@ class TaskMaster:
             
             # Add each reduce task to the ready queue if there are no map tasks
             # else add them to the wait queue
-            if no_mappers:
+            if mapper_not_exist:
                 self.lock["ready_q"].acquire()
                 for task in job['reduce_tasks']:
                     new_task = Task(task['task_id'], task['duration'], job_id, reducer=True)
@@ -299,8 +299,8 @@ class TaskMaster:
 
             if map_done and not started_reducers:
                 # Move all reducers from the waiting queue to the ready queue
-                reducers = list(filter(lambda x: x.job_id == job, self.wait_q))
                 with self.lock["wait_q"]:
+                    reducers = list(filter(lambda x: x.job_id == job, self.wait_q))
                     self.wait_q = [x for x in self.wait_q if x not in reducers]
                 
                 with self.lock["ready_q"]:
@@ -348,9 +348,11 @@ class TaskMaster:
             
             # Once taken from the dictionary, are these values copies?
             # If they are copies, the later locks on workers is not required
+            self.lock["workers"].acquire()
             workers_list = list(self.workers.values())
             workers_list.sort(key=lambda x: x.w_id)
             index = self.scheduler.select(workers_list, self.lock["workers"])
+            self.lock["workers"].release()
 
             if index == -1:
                 time.sleep(0.2)
@@ -360,7 +362,8 @@ class TaskMaster:
                 task = self.ready_q.pop()
 
             # Verify no lock required for this
-            worker = workers_list[index]
+            with self.lock["workers"]:
+                worker = workers_list[index]
 
             # Move the task to the running queue
             with self.lock["running_q"]:

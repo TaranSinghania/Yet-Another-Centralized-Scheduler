@@ -12,14 +12,14 @@ What's been tried:
 * Finished Log Analysis
 * Add selective waiting for scheduling
 
-How to use:
+## Usage
+Clone this repo and move to the root of the repo
+`git clone https://github.com/TaranSinghania/BigDataYACS_SpaceMonkeyz`
+
+How to run: (Use separate terminal for each one)
 1. Run `python3 worker.py 4000 1`
 2. Run `python3 worker.py 4001 2`
-2. Run `python3 worker.py 4002 3`
-2. Run `python3 master.py`
-3. Run `python3 requests.py 10`
-4. Run `python3 log_analysis.py 3`
-
-## Notes
-- Because the scheduler allocates only one task at a time the worker slots are
-being under-utilized  
+3. Run `python3 worker.py 4002 3`
+4. Run `python3 master.py config.json RR`
+5. Run `python3 requests.py 10`
+6. Run `python3 log_analysis.py 3`
