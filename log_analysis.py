@@ -86,8 +86,8 @@ class plotTime:
     def __init__(self, parse_file, num_workers):
         self.parse_file = parse_file
         self.num_workers = num_workers
-        self.time_dict = {}
-        self.timestamps = []
+        self.time_dict = {} # Dictionary containing: Worker_ID -> Slots Used
+        self.timestamps = [] # Timestamps in a list
         self.key = "Worker "
 
     def parse(self):

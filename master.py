@@ -63,7 +63,6 @@ class Task:
             self.type = REDUCER
 
         # Unique identifier, extra protection with task_id
-        # Hash is misleading, replace with uuid
         self.hash = uuid.uuid4().hex + str(task_id)
     
     def dispatch(self):
@@ -78,8 +77,7 @@ class Task:
     # For debugging
     def __repr__(self):
         return f"Task:{self.task_id} of Job{self.job_id} with duration:{self.duration}"
-    
-    # Needs more research on collision probability, use self.hash instead
+
     # uuid is reliable
     def __hash__(self):
         return hash(self.hash)
