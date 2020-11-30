@@ -5,9 +5,6 @@ Functions:
 * Calculates mean and median task completion time
 * Calculates mean and median job completion time
 * Plots number of tasks scheduled on each machine vs time
-Use the utility module for all communications  
-
-! Start all workers and master before running this file
 """
 import sys
 import matplotlib.pyplot as plt
@@ -110,7 +107,7 @@ class plotTime:
                 worker_id, slots, timestamp = log_item.split(",")
                 self.time_dict[self.key + worker_id].append(int(slots))
                 # Add to timestamp list if not already present. Timestamps are unique.
-                timestamp = round(float(timestamp.strip()), 2)
+                timestamp = float(timestamp.strip())
                 if timestamp not in self.timestamps:
                     self.timestamps.append(timestamp)
 
