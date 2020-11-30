@@ -63,7 +63,6 @@ class Task:
             self.type = REDUCER
 
         # Unique identifier, extra protection with task_id
-        # Hash is misleading, replace with uuid
         self.hash = uuid.uuid4().hex + str(task_id)
     
     def dispatch(self):
@@ -78,8 +77,7 @@ class Task:
     # For debugging
     def __repr__(self):
         return f"Task:{self.task_id} of Job{self.job_id} with duration:{self.duration}"
-    
-    # Needs more research on collision probability, use self.hash instead
+
     # uuid is reliable
     def __hash__(self):
         return hash(self.hash)
@@ -214,10 +212,10 @@ class TaskMaster:
             self.jobs[job_id]["no_mappers"] = len(job['map_tasks'])
             self.jobs[job_id]["no_reducers"] = len(job['reduce_tasks'])
 
-            no_mappers = (len(job['map_tasks']) == 0)
+            mapper_not_exist = (len(job['map_tasks']) == 0)
 
             # Indicate if the reducers have been started
-            self.jobs[job_id]["started_reducers"] = no_mappers
+            self.jobs[job_id]["started_reducers"] = mapper_not_exist
             # ==================================================================
             self.lock["jobs"].release()
             
@@ -230,7 +228,7 @@ class TaskMaster:
             
             # Add each reduce task to the ready queue if there are no map tasks
             # else add them to the wait queue
-            if no_mappers:
+            if mapper_not_exist:
                 self.lock["ready_q"].acquire()
                 for task in job['reduce_tasks']:
                     new_task = Task(task['task_id'], task['duration'], job_id, reducer=True)
@@ -299,8 +297,8 @@ class TaskMaster:
 
             if map_done and not started_reducers:
                 # Move all reducers from the waiting queue to the ready queue
-                reducers = list(filter(lambda x: x.job_id == job, self.wait_q))
                 with self.lock["wait_q"]:
+                    reducers = list(filter(lambda x: x.job_id == job, self.wait_q))
                     self.wait_q = [x for x in self.wait_q if x not in reducers]
                 
                 with self.lock["ready_q"]:
@@ -348,9 +346,11 @@ class TaskMaster:
             
             # Once taken from the dictionary, are these values copies?
             # If they are copies, the later locks on workers is not required
+            self.lock["workers"].acquire()
             workers_list = list(self.workers.values())
             workers_list.sort(key=lambda x: x.w_id)
             index = self.scheduler.select(workers_list, self.lock["workers"])
+            self.lock["workers"].release()
 
             if index == -1:
                 time.sleep(0.2)
@@ -360,7 +360,8 @@ class TaskMaster:
                 task = self.ready_q.pop()
 
             # Verify no lock required for this
-            worker = workers_list[index]
+            with self.lock["workers"]:
+                worker = workers_list[index]
 
             # Move the task to the running queue
             with self.lock["running_q"]:
@@ -378,8 +379,11 @@ class TaskMaster:
         # Log worker loads
         while True:
             # Log only while jobs still in progress
+            self.lock["jobs"].acquire()
             if not self.jobs:
+                self.lock["jobs"].release()
                 continue
+            self.lock["jobs"].release()
 
             # Local timer
             local_timer = round(time.time() - self.timer, 5)
@@ -401,8 +405,11 @@ class TaskMaster:
         # Log state of queues for debugging
         while True:
             # Don't log when there are no jobs
+            self.lock["jobs"].acquire()
             if not self.jobs:
+                self.lock["jobs"].release()
                 continue
+            self.lock["jobs"].release()
 
             # Not required for log analysis
             with open('logs/main.log', 'a') as wire:

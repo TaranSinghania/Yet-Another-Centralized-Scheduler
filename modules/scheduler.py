@@ -27,19 +27,17 @@ class Random(Scheduler):
     name = "Random"
     def select(self, workers: list, lock: threading.Lock):
         # If a worker is not free remove from random selection
-        lock.acquire()
-        yet_to_try = workers.copy()
+        yet_to_try = list(enumerate(workers.copy()))
         while yet_to_try:
             index = random.randrange(0, len(yet_to_try))
-            if yet_to_try[index].free > 0:
+            real_index, worker = yet_to_try[index]
+            if worker.free > 0:
                 # Found a worker with free slots
-                lock.release()
-                return index
+                return real_index
             # No free slots
             yet_to_try.pop(index)
         else:
             # Could not find a free slot in any worker
-            lock.release()
             return -1
 
 
@@ -54,7 +52,6 @@ class RoundRobin(Scheduler):
         self.prev = -1
 
     def select(self, workers: list, lock: threading.Lock):
-        lock.acquire()
         n = len(workers)
         if self.prev == -1:
             start = 0
@@ -65,12 +62,10 @@ class RoundRobin(Scheduler):
         while counter > 0:
             if workers[start].free > 0:
                 self.prev = start
-                lock.release()
                 return start
             start = (start + 1) % n
             counter -= 1
         else:
-            lock.release()
             return -1
 
 
@@ -82,7 +77,6 @@ class LeastLoaded(Scheduler):
     def select(self, workers: list, lock: threading.Lock):
         max_slots = -1
         max_idx = -1
-        lock.acquire()
         while True:
             for i in range(len(workers)):
                 # Update max free slots available and the index of worker
@@ -96,8 +90,6 @@ class LeastLoaded(Scheduler):
                 time.sleep(1)
                 lock.acquire()
             else:
-                lock.release()
                 return max_idx
         
-        lock.release()
         return -1
