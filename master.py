@@ -381,8 +381,11 @@ class TaskMaster:
         # Log worker loads
         while True:
             # Log only while jobs still in progress
+            self.lock["jobs"].acquire()
             if not self.jobs:
+                self.lock["jobs"].release()
                 continue
+            self.lock["jobs"].release()
 
             # Local timer
             local_timer = round(time.time() - self.timer, 5)
@@ -404,8 +407,11 @@ class TaskMaster:
         # Log state of queues for debugging
         while True:
             # Don't log when there are no jobs
+            self.lock["jobs"].acquire()
             if not self.jobs:
+                self.lock["jobs"].release()
                 continue
+            self.lock["jobs"].release()
 
             # Not required for log analysis
             with open('logs/main.log', 'a') as wire:

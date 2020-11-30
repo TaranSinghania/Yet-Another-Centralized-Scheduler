@@ -95,14 +95,12 @@ class Worker:
                 # Handle case of float duration
                 remain = max(0, remain-1)
                 self.pool[i]["duration"] = remain
-            self.lock["pool"].release()
         
             # Remove all tasks that have finished from the pool
             # Possible alternative, use a set, set hash as task hash
             # Set approach is more readable, but it is a hack
             # Linear time algorithm, ignore specifics
             first_free_position = 0
-            self.lock["pool"].acquire()
             for i in range(len(self.pool)):
                 if self.pool[i]["duration"] == 0:
                     # Notify master of completion
