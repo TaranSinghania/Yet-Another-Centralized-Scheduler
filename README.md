@@ -25,5 +25,5 @@ How to run: (Use separate terminal for each one)
 2. Run `python3 worker.py 4001 2`
 3. Run `python3 worker.py 4002 3`
 4. Run `python3 master.py config.json RR` (Acceptable options: RR - Round Robin | R - Random | LL - Least Loaded)
-5. Run `python3 requests.py 10`
-6. Run `python3 log_analysis.py 3`
+5. Run `python3 requests.py 30`
+6. Run `python3 log_analysis.py`

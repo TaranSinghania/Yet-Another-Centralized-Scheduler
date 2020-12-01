@@ -72,8 +72,8 @@ class calc_time:
         mean = calc.mean()
         median = calc.median()
 
-        print("The mean ", self.file[5:-4], " completion time is: ", mean, " seconds")
-        print("The median ", self.file[5:-4], " completion time is: ", median, " seconds")
+        print("The mean ", self.file[:-4], " completion time is: ", mean, " seconds")
+        print("The median ", self.file[:-4], " completion time is: ", median, " seconds")
         print("\n")
 
         return mean, median
