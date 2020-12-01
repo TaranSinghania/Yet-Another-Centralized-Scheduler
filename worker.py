@@ -25,9 +25,10 @@ MASTER_PORT = 5001
 """
 Helper functions
 Does not affect fundamental workflow
+Ported from the original implementaion's utility module
 """
-BUF_LEN = 4096 # Buffer Size
-class utility:
+BUF_LEN = 65535 # Buffer Size
+class Utility:
     # Recevie a message through a socket
     def sock_recv(self, sock):
         # This socket is a server-side socket
@@ -43,7 +44,8 @@ class utility:
         data = data.encode()
         # Must buffer this later on
         sock.send(data)
-utility = utility()
+utility = Utility()
+
 
 class Worker:
     """  

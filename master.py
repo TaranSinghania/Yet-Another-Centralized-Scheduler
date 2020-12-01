@@ -46,6 +46,7 @@ scheduling_algorithm = sys.argv[2] # Read scheduling algo to be used
 
 """
 Scheduler classes
+Ported from the scheduler module from the previous setup
 """
 class Scheduler:
     """
@@ -59,7 +60,8 @@ class Scheduler:
         # Return -1 if no slot is available
         raise NotImplementedError
 
-class Random():
+
+class Random(Scheduler):
     """
     Randomly select a worker with a free slot
     """
@@ -80,7 +82,7 @@ class Random():
             return -1
 
 
-class RoundRobin():
+class RoundRobin(Scheduler):
     """
     Pick machines in a circular order
     Assume that the list of workers passed is the same
@@ -108,19 +110,19 @@ class RoundRobin():
             return -1
 
 
-class LeastLoaded():
+class LeastLoaded(Scheduler):
     """
     Pick the least loaded machine
     """
     name = "LeastLoaded"
     def select(self, workers: list, lock: threading.Lock):
-        max_slots = -1
+        min_slots = 1 << 30
         max_idx = -1
         while True:
             for i in range(len(workers)):
                 # Update max free slots available and the index of worker
-                if workers[i].free > 0 and workers[i].free > max_slots:
-                    max_slots = workers[i].free
+                if workers[i].free > 0 and workers[i].used < min_slots:
+                    min_slots = workers[i].used
                     max_idx = i
 
             # If no slots are free, sleep for one second
@@ -137,9 +139,10 @@ class LeastLoaded():
 """
 Helper functions
 Does not affect fundamental workflow
+Ported from the utility module from the previous setup
 """
-BUF_LEN = 4096 # Buffer Size
-class utility:
+BUF_LEN = 65535 # Buffer Size
+class Utility:
     # Recevie a message through a socket
     def sock_recv(self, sock):
         # This socket is a server-side socket
@@ -155,7 +158,8 @@ class utility:
         data = data.encode()
         # Must buffer this later on
         sock.send(data)
-utility = utility()
+utility = Utility()
+
 
 class Task:
     """
@@ -290,6 +294,7 @@ class TaskMaster:
         with open(self.w_log, 'w') as wire:
             # Write the log file format
             # Worker-id - number of tasks
+            wire.write(f"{len(worker)}\n")
             wire.write("# Worker-id, Number of tasks running, Timestamp\n")
         
         # TM timer
@@ -557,6 +562,9 @@ def main():
     # Clear the debug log file
     with open('main.log', 'w'):
         pass
+
+    with open(path_to_config_file) as red:
+        config = json.load(red)
     
     # Clear the general log files
     with open('task' + scheduling_algorithm + '.log', 'w') as wire:
@@ -566,9 +574,6 @@ def main():
     with open('job' + scheduling_algorithm + '.log', 'w') as wire:
         # Write down the log file format
         wire.write("# job-id - completion time in seconds (float)\n")
-
-    with open(path_to_config_file) as red:
-        config = json.load(red)
     
     # Choosing the scheduler to use
     if scheduling_algorithm == "RR":

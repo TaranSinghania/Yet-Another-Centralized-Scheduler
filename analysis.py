@@ -40,7 +40,6 @@ class stats:
         return median
 
 
-
 class calc_time:
     """
     Calculates the mean and median time needed to run the tasks and jobs.
@@ -56,6 +55,8 @@ class calc_time:
     def parse(self):
         with open(self.file, 'r') as f:
             logs = f.readlines()
+            logs = logs[1:]
+        
 
         for item in logs:
             # Ignore header
@@ -76,8 +77,6 @@ class calc_time:
         print("\n")
 
         return mean, median
-        
-
 
 
 class plotTime:
@@ -86,9 +85,8 @@ class plotTime:
     Contains a parser to parse the log file
     Contains a function to plot the line graph.
     """
-    def __init__(self, parse_file, num_workers):
+    def __init__(self, parse_file):
         self.parse_file = parse_file
-        self.num_workers = num_workers
         self.time_dict = {} # Dictionary containing: Worker_ID -> Slots Used
         self.timestamps = [] # Timestamps in a list
         self.key = "Worker "
@@ -96,7 +94,9 @@ class plotTime:
     def parse(self):
         with open(self.parse_file, 'r') as f:
             # Ignore header
-            logs = f.readlines()[1:]
+            logs = f.readlines()
+            self.num_workers = int(logs[0].strip())
+            logs = logs[2:]
         
         # Creating dictionary Ex: "Worker 1": [slots used]
         for i in range(self.num_workers):
@@ -128,17 +128,7 @@ class plotTime:
         plt.show()  
 
 
-
 def main():
-
-    # Check if arguments passed satisfy the requirements
-    if(len(sys.argv) < 2):
-        print("Incorrect Usage. Correct Usage: python3 log_analysis.py <number of workers>")
-        sys.exit(0)
-
-    # Set number of workers. Needed to parse the log file
-    num_workers = int(sys.argv[1])
-
     # Round Robin Calculation time
     task = calc_time('taskRR.log')
     task.parse()
@@ -188,20 +178,19 @@ def main():
     plt.show()
 
     # Round Robin plot
-    rr = plotTime('RoundRobinWorker.log', num_workers)
+    rr = plotTime('RoundRobinWorker.log')
     rr.parse()
     rr.plotGraph()
 
     # Random plot
-    rd = plotTime('RandomWorker.log', num_workers)
+    rd = plotTime('RandomWorker.log')
     rd.parse()
     rd.plotGraph()
 
     # Least Loaded plot
-    ll = plotTime('LeastLoadedWorker.log', num_workers)
+    ll = plotTime('LeastLoadedWorker.log')
     ll.parse()
     ll.plotGraph()    
-
 
 
 if __name__ == "__main__":
