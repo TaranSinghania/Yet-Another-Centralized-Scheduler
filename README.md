@@ -12,6 +12,10 @@ What's been tried:
 * Finished Log Analysis
 * Add selective waiting for scheduling
 
+## Requirements
+To install the requirements, run the following command
+`python3 -m pip install -r requirements.txt`
+
 ## Usage
 Clone this repo and move to the root of the repo
 `git clone https://github.com/TaranSinghania/BigDataYACS_SpaceMonkeyz`
