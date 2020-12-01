@@ -18,11 +18,32 @@ import json
 import time
 import threading
 
-import modules.utility as utility
 
 HOST = "localhost"
 MASTER_PORT = 5001
 
+"""
+Helper functions
+Does not affect fundamental workflow
+"""
+BUF_LEN = 4096 # Buffer Size
+class utility:
+    # Recevie a message through a socket
+    def sock_recv(self, sock):
+        # This socket is a server-side socket
+        (clientsocket, _) = sock.accept()
+        # print("CONNECTED from", address)
+        # Must add true buffering later on
+        data = clientsocket.recv(BUF_LEN)
+        clientsocket.close()
+        return data.decode()
+
+    def sock_send(self, sock, data: str):
+        # This socket is a client-side socket
+        data = data.encode()
+        # Must buffer this later on
+        sock.send(data)
+utility = utility()
 
 class Worker:
     """  
