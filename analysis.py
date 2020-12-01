@@ -123,7 +123,7 @@ class plotTime:
         
         plt.xlabel("Timestamp")
         plt.ylabel("Number of slots being used")
-        plt.title("Slots vs Time for " + self.parse_file[5:-10]) # [:-10] for removing "Worker.log" in the title.
+        plt.title("Slots vs Time for " + self.parse_file[:-10]) # [:-10] for removing "Worker.log" in the title.
         plt.legend()
         plt.show()  
 
@@ -140,30 +140,30 @@ def main():
     num_workers = int(sys.argv[1])
 
     # Round Robin Calculation time
-    task = calc_time('logs/taskRR.log')
+    task = calc_time('taskRR.log')
     task.parse()
     task.calc_mean_median()
 
-    job = calc_time('logs/jobRR.log')
+    job = calc_time('jobRR.log')
     job.parse()
     rr_job_mean, rr_job_median = job.calc_mean_median()
 
 
     # Random Calculation time
-    task = calc_time('logs/taskR.log')
+    task = calc_time('taskR.log')
     task.parse()
     task.calc_mean_median()
 
-    job = calc_time('logs/jobR.log')
+    job = calc_time('jobR.log')
     job.parse()
     r_job_mean, r_job_median = job.calc_mean_median()
 
     # Least Loaded Calculation time
-    task = calc_time('logs/taskLL.log')
+    task = calc_time('taskLL.log')
     task.parse()
     task.calc_mean_median()
 
-    job = calc_time('logs/jobLL.log')
+    job = calc_time('jobLL.log')
     job.parse()
     ll_job_mean, ll_job_median = job.calc_mean_median()
 
@@ -188,17 +188,17 @@ def main():
     plt.show()
 
     # Round Robin plot
-    rr = plotTime('logs/RoundRobinWorker.log', num_workers)
+    rr = plotTime('RoundRobinWorker.log', num_workers)
     rr.parse()
     rr.plotGraph()
 
     # Random plot
-    rd = plotTime('logs/RandomWorker.log', num_workers)
+    rd = plotTime('RandomWorker.log', num_workers)
     rd.parse()
     rd.plotGraph()
 
     # Least Loaded plot
-    ll = plotTime('logs/LeastLoadedWorker.log', num_workers)
+    ll = plotTime('LeastLoadedWorker.log', num_workers)
     ll.parse()
     ll.plotGraph()    
 

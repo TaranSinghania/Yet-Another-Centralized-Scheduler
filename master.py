@@ -286,7 +286,7 @@ class TaskMaster:
         self.lock = {item: threading.Lock() for item in lockable_items}
 
         # The worker-load log file
-        self.w_log = "logs/" + scheduler.name + "Worker.log"
+        self.w_log = scheduler.name + "Worker.log"
         with open(self.w_log, 'w') as wire:
             # Write the log file format
             # Worker-id - number of tasks
@@ -390,7 +390,7 @@ class TaskMaster:
                 print("Task complete", task.hash)
 
             # Log task completion
-            with open("logs/task" + scheduling_algorithm + ".log", 'a') as wire:
+            with open("task" + scheduling_algorithm + ".log", 'a') as wire:
                 print(f"{task.task_id} - {task.completion_time}", file=wire)
 
             # Update job
@@ -429,7 +429,7 @@ class TaskMaster:
 
                 # Log job completion
                 total = self.jobs[job]["completed"] - self.jobs[job]["arrival"] 
-                with open('logs/job' + scheduling_algorithm + '.log', 'a') as wire:
+                with open('job' + scheduling_algorithm + '.log', 'a') as wire:
                     print(f"{job} - {total}", file=wire)
                 
                 # Don't need the job anymore
@@ -523,7 +523,7 @@ class TaskMaster:
             self.lock["jobs"].release()
 
             # Not required for log analysis
-            with open('logs/main.log', 'a') as wire:
+            with open('main.log', 'a') as wire:
                 print("========================================", file=wire)
                 self.lock["ready_q"].acquire()
                 print("READY_QUEUE", file=wire)
@@ -555,15 +555,15 @@ def main():
     # Run the three threads of taskmaster
 
     # Clear the debug log file
-    with open('logs/main.log', 'w'):
+    with open('main.log', 'w'):
         pass
     
     # Clear the general log files
-    with open('logs/task' + scheduling_algorithm + '.log', 'w') as wire:
+    with open('task' + scheduling_algorithm + '.log', 'w') as wire:
         # Write down the log file format
         wire.write("# task-id - completion time in seconds (float)\n")
 
-    with open('logs/job' + scheduling_algorithm + '.log', 'w') as wire:
+    with open('job' + scheduling_algorithm + '.log', 'w') as wire:
         # Write down the log file format
         wire.write("# job-id - completion time in seconds (float)\n")
 

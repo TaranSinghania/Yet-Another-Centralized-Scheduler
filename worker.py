@@ -97,7 +97,7 @@ class Worker:
             # This logging can be here as the thread is required to sleep
             # and therefore performs periodic logging automatically
             self.lock["pool"].acquire()
-            with open('logs/worker.log', 'a') as wire:
+            with open('worker.log', 'a') as wire:
                 print(self.pool, file=wire)
                 print("============================================", file=wire)
             self.lock["pool"].release()
@@ -154,7 +154,7 @@ class Worker:
 
 def main():
     # Clear the log file
-    with open('logs/worker.log', 'w') as _:
+    with open('worker.log', 'w') as _:
         pass
 
     listen_port = 4000 #Default
