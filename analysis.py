@@ -75,6 +75,9 @@ class calc_time:
         print("The median ", self.file[5:-4], " completion time is: ", median, " seconds")
         print("\n")
 
+        return mean, median
+        
+
 
 
 class plotTime:
@@ -143,39 +146,58 @@ def main():
 
     job = calc_time('logs/jobRR.log')
     job.parse()
-    job.calc_mean_median()
+    rr_job_mean, rr_job_median = job.calc_mean_median()
 
 
-    #Random Calculation time
+    # Random Calculation time
     task = calc_time('logs/taskR.log')
     task.parse()
     task.calc_mean_median()
 
     job = calc_time('logs/jobR.log')
     job.parse()
-    job.calc_mean_median()
+    r_job_mean, r_job_median = job.calc_mean_median()
 
-    #Least Loaded Calculation time
+    # Least Loaded Calculation time
     task = calc_time('logs/taskLL.log')
     task.parse()
     task.calc_mean_median()
 
     job = calc_time('logs/jobLL.log')
     job.parse()
-    job.calc_mean_median()
+    ll_job_mean, ll_job_median = job.calc_mean_median()
 
 
-    #Round Robin plot
+    # Plotting bar chart for comparison [JOBS]
+    labels = ['RoundRobin', 'Random', 'LeastLoaded']
+    job_mean = [rr_job_mean, r_job_mean, ll_job_mean]
+    job_median = [rr_job_median, r_job_median, ll_job_median]
+
+    # Plotting mean job completion time for different algorithms
+    plt.bar(labels, job_mean)
+    plt.xlabel("Scheduling Algorithms")
+    plt.ylabel("Time")
+    plt.title("Mean Job completion time")
+    plt.show()
+
+    # Plotting median job completion time for different algorithms
+    plt.bar(labels, job_median)
+    plt.xlabel("Scheduling Algorithms")
+    plt.ylabel("Time")
+    plt.title("Median Job completion time")
+    plt.show()
+
+    # Round Robin plot
     rr = plotTime('logs/RoundRobinWorker.log', num_workers)
     rr.parse()
     rr.plotGraph()
 
-    #Random plot
+    # Random plot
     rd = plotTime('logs/RandomWorker.log', num_workers)
     rd.parse()
     rd.plotGraph()
 
-    #Least Loaded plot
+    # Least Loaded plot
     ll = plotTime('logs/LeastLoadedWorker.log', num_workers)
     ll.parse()
     ll.plotGraph()    
