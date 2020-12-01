@@ -1,17 +1,5 @@
 # Yet Another Centralized Scheduler
 
-What's been tried:
-* A single request and a single worker, all multithreaded
-* Multiple requests, single worker
-* Multiple requests, multiple workers
-* Logging info for jobs and tasks
-* Logging at the worker level
-* Finding mean, median of task and job times
-* Place multiple workers, use a shell script
-* Add LL scheduler
-* Finished Log Analysis
-* Add selective waiting for scheduling
-
 ## Requirements
 To install the requirements, run the following command
 `python3 -m pip install -r requirements.txt`
