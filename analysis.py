@@ -40,7 +40,6 @@ class stats:
         return median
 
 
-
 class calc_time:
     """
     Calculates the mean and median time needed to run the tasks and jobs.
@@ -56,6 +55,8 @@ class calc_time:
     def parse(self):
         with open(self.file, 'r') as f:
             logs = f.readlines()
+            logs = logs[1:]
+        
 
         for item in logs:
             # Ignore header
@@ -71,13 +72,11 @@ class calc_time:
         mean = calc.mean()
         median = calc.median()
 
-        print("The mean ", self.file[5:-4], " completion time is: ", mean, " seconds")
-        print("The median ", self.file[5:-4], " completion time is: ", median, " seconds")
+        print("The mean ", self.file[:-4], " completion time is: ", mean, " seconds")
+        print("The median ", self.file[:-4], " completion time is: ", median, " seconds")
         print("\n")
 
         return mean, median
-        
-
 
 
 class plotTime:
@@ -86,9 +85,8 @@ class plotTime:
     Contains a parser to parse the log file
     Contains a function to plot the line graph.
     """
-    def __init__(self, parse_file, num_workers):
+    def __init__(self, parse_file):
         self.parse_file = parse_file
-        self.num_workers = num_workers
         self.time_dict = {} # Dictionary containing: Worker_ID -> Slots Used
         self.timestamps = [] # Timestamps in a list
         self.key = "Worker "
@@ -96,7 +94,9 @@ class plotTime:
     def parse(self):
         with open(self.parse_file, 'r') as f:
             # Ignore header
-            logs = f.readlines()[1:]
+            logs = f.readlines()
+            self.num_workers = int(logs[0].strip())
+            logs = logs[2:]
         
         # Creating dictionary Ex: "Worker 1": [slots used]
         for i in range(self.num_workers):
@@ -123,47 +123,37 @@ class plotTime:
         
         plt.xlabel("Timestamp")
         plt.ylabel("Number of slots being used")
-        plt.title("Slots vs Time for " + self.parse_file[5:-10]) # [:-10] for removing "Worker.log" in the title.
+        plt.title("Slots vs Time for " + self.parse_file[:-10]) # [:-10] for removing "Worker.log" in the title.
         plt.legend()
         plt.show()  
 
 
-
 def main():
-
-    # Check if arguments passed satisfy the requirements
-    if(len(sys.argv) < 2):
-        print("Incorrect Usage. Correct Usage: python3 log_analysis.py <number of workers>")
-        sys.exit(0)
-
-    # Set number of workers. Needed to parse the log file
-    num_workers = int(sys.argv[1])
-
     # Round Robin Calculation time
-    task = calc_time('logs/taskRR.log')
+    task = calc_time('taskRR.log')
     task.parse()
     task.calc_mean_median()
 
-    job = calc_time('logs/jobRR.log')
+    job = calc_time('jobRR.log')
     job.parse()
     rr_job_mean, rr_job_median = job.calc_mean_median()
 
 
     # Random Calculation time
-    task = calc_time('logs/taskR.log')
+    task = calc_time('taskR.log')
     task.parse()
     task.calc_mean_median()
 
-    job = calc_time('logs/jobR.log')
+    job = calc_time('jobR.log')
     job.parse()
     r_job_mean, r_job_median = job.calc_mean_median()
 
     # Least Loaded Calculation time
-    task = calc_time('logs/taskLL.log')
+    task = calc_time('taskLL.log')
     task.parse()
     task.calc_mean_median()
 
-    job = calc_time('logs/jobLL.log')
+    job = calc_time('jobLL.log')
     job.parse()
     ll_job_mean, ll_job_median = job.calc_mean_median()
 
@@ -188,20 +178,19 @@ def main():
     plt.show()
 
     # Round Robin plot
-    rr = plotTime('logs/RoundRobinWorker.log', num_workers)
+    rr = plotTime('RoundRobinWorker.log')
     rr.parse()
     rr.plotGraph()
 
     # Random plot
-    rd = plotTime('logs/RandomWorker.log', num_workers)
+    rd = plotTime('RandomWorker.log')
     rd.parse()
     rd.plotGraph()
 
     # Least Loaded plot
-    ll = plotTime('logs/LeastLoadedWorker.log', num_workers)
+    ll = plotTime('LeastLoadedWorker.log')
     ll.parse()
     ll.plotGraph()    
-
 
 
 if __name__ == "__main__":

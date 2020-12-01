@@ -19,10 +19,8 @@ import uuid
 import json
 import socket
 import time
+import random
 import threading
-
-import modules.scheduler as scheduler
-import modules.utility as utility
 
 
 HOST = "localhost"
@@ -44,6 +42,123 @@ if(len(sys.argv) < 3):
 
 path_to_config_file = sys.argv[1] # Read path to config file
 scheduling_algorithm = sys.argv[2] # Read scheduling algo to be used
+
+
+"""
+Scheduler classes
+Ported from the scheduler module from the previous setup
+"""
+class Scheduler:
+    """
+    A single function to pick a worker from a list of worker
+    """
+    # Useful for log file naming
+    name = "Default-Scheduler"
+    def select(self, workers: list, lock: threading.Lock):
+        # Acquire lock while searching
+        # Return the worker_id of a single worker
+        # Return -1 if no slot is available
+        raise NotImplementedError
+
+
+class Random(Scheduler):
+    """
+    Randomly select a worker with a free slot
+    """
+    name = "Random"
+    def select(self, workers: list, lock: threading.Lock):
+        # If a worker is not free remove from random selection
+        yet_to_try = list(enumerate(workers.copy()))
+        while yet_to_try:
+            index = random.randrange(0, len(yet_to_try))
+            real_index, worker = yet_to_try[index]
+            if worker.free > 0:
+                # Found a worker with free slots
+                return real_index
+            # No free slots
+            yet_to_try.pop(index)
+        else:
+            # Could not find a free slot in any worker
+            return -1
+
+
+class RoundRobin(Scheduler):
+    """
+    Pick machines in a circular order
+    Assume that the list of workers passed is the same
+    """
+    name = "RoundRobin"
+    def __init__(self):
+        # What worker was picked the last time? Go on from there
+        self.prev = -1
+
+    def select(self, workers: list, lock: threading.Lock):
+        n = len(workers)
+        if self.prev == -1:
+            start = 0
+        else:
+            start = (self.prev + 1) % n
+        # How many nodes to search before giving up
+        counter = n
+        while counter > 0:
+            if workers[start].free > 0:
+                self.prev = start
+                return start
+            start = (start + 1) % n
+            counter -= 1
+        else:
+            return -1
+
+
+class LeastLoaded(Scheduler):
+    """
+    Pick the least loaded machine
+    """
+    name = "LeastLoaded"
+    def select(self, workers: list, lock: threading.Lock):
+        max_slots = -1
+        max_idx = -1
+        while True:
+            for i in range(len(workers)):
+                # Update max free slots available and the index of worker
+                if workers[i].free > 0 and workers[i].free > max_slots:
+                    max_slots = workers[i].free
+                    max_idx = i
+
+            # If no slots are free, sleep for one second
+            if max_idx == -1:
+                lock.release()
+                time.sleep(1)
+                lock.acquire()
+            else:
+                return max_idx
+        
+        return -1
+
+
+"""
+Helper functions
+Does not affect fundamental workflow
+Ported from the utility module from the previous setup
+"""
+BUF_LEN = 65535 # Buffer Size
+class Utility:
+    # Recevie a message through a socket
+    def sock_recv(self, sock):
+        # This socket is a server-side socket
+        (clientsocket, _) = sock.accept()
+        # print("CONNECTED from", address)
+        # Must add true buffering later on
+        data = clientsocket.recv(BUF_LEN)
+        clientsocket.close()
+        return data.decode()
+
+    def sock_send(self, sock, data: str):
+        # This socket is a client-side socket
+        data = data.encode()
+        # Must buffer this later on
+        sock.send(data)
+utility = Utility()
 
 
 class Task:
@@ -138,7 +253,7 @@ class TaskMaster:
     - The sockets it's using for listening
     - The workers it has in its configuration
     """
-    def __init__(self, scheduler: scheduler.Scheduler, config):
+    def __init__(self, scheduler: Scheduler, config):
         # An object of a sublclass of the Scheduler class
         self.scheduler = scheduler
 
@@ -175,10 +290,11 @@ class TaskMaster:
         self.lock = {item: threading.Lock() for item in lockable_items}
 
         # The worker-load log file
-        self.w_log = "logs/" + scheduler.name + "Worker.log"
+        self.w_log = scheduler.name + "Worker.log"
         with open(self.w_log, 'w') as wire:
             # Write the log file format
             # Worker-id - number of tasks
+            wire.write(f"{len(worker)}\n")
             wire.write("# Worker-id, Number of tasks running, Timestamp\n")
         
         # TM timer
@@ -279,7 +395,7 @@ class TaskMaster:
                 print("Task complete", task.hash)
 
             # Log task completion
-            with open("logs/task" + scheduling_algorithm + ".log", 'a') as wire:
+            with open("task" + scheduling_algorithm + ".log", 'a') as wire:
                 print(f"{task.task_id} - {task.completion_time}", file=wire)
 
             # Update job
@@ -318,7 +434,7 @@ class TaskMaster:
 
                 # Log job completion
                 total = self.jobs[job]["completed"] - self.jobs[job]["arrival"] 
-                with open('logs/job' + scheduling_algorithm + '.log', 'a') as wire:
+                with open('job' + scheduling_algorithm + '.log', 'a') as wire:
                     print(f"{job} - {total}", file=wire)
                 
                 # Don't need the job anymore
@@ -412,7 +528,7 @@ class TaskMaster:
             self.lock["jobs"].release()
 
             # Not required for log analysis
-            with open('logs/main.log', 'a') as wire:
+            with open('main.log', 'a') as wire:
                 print("========================================", file=wire)
                 self.lock["ready_q"].acquire()
                 print("READY_QUEUE", file=wire)
@@ -444,28 +560,28 @@ def main():
     # Run the three threads of taskmaster
 
     # Clear the debug log file
-    with open('logs/main.log', 'w'):
+    with open('main.log', 'w'):
         pass
-    
-    # Clear the general log files
-    with open('logs/task' + scheduling_algorithm + '.log', 'w') as wire:
-        # Write down the log file format
-        wire.write("# task-id - completion time in seconds (float)\n")
-
-    with open('logs/job' + scheduling_algorithm + '.log', 'w') as wire:
-        # Write down the log file format
-        wire.write("# job-id - completion time in seconds (float)\n")
 
     with open(path_to_config_file) as red:
         config = json.load(red)
     
+    # Clear the general log files
+    with open('task' + scheduling_algorithm + '.log', 'w') as wire:
+        # Write down the log file format
+        wire.write("# task-id - completion time in seconds (float)\n")
+
+    with open('job' + scheduling_algorithm + '.log', 'w') as wire:
+        # Write down the log file format
+        wire.write("# job-id - completion time in seconds (float)\n")
+    
     # Choosing the scheduler to use
     if scheduling_algorithm == "RR":
-        spider_man = TaskMaster(scheduler.RoundRobin(), config)
+        spider_man = TaskMaster(RoundRobin(), config)
     elif scheduling_algorithm == "LL":
-        spider_man = TaskMaster(scheduler.LeastLoaded(), config)
+        spider_man = TaskMaster(LeastLoaded(), config)
     else:
-         spider_man = TaskMaster(scheduler.Random(), config)
+         spider_man = TaskMaster(Random(), config)
        
     for worker in spider_man.workers.values():
         print(worker)

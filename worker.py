@@ -18,10 +18,33 @@ import json
 import time
 import threading
 
-import modules.utility as utility
 
 HOST = "localhost"
 MASTER_PORT = 5001
+
+"""
+Helper functions
+Does not affect fundamental workflow
+Ported from the original implementaion's utility module
+"""
+BUF_LEN = 65535 # Buffer Size
+class Utility:
+    # Recevie a message through a socket
+    def sock_recv(self, sock):
+        # This socket is a server-side socket
+        (clientsocket, _) = sock.accept()
+        # print("CONNECTED from", address)
+        # Must add true buffering later on
+        data = clientsocket.recv(BUF_LEN)
+        clientsocket.close()
+        return data.decode()
+
+    def sock_send(self, sock, data: str):
+        # This socket is a client-side socket
+        data = data.encode()
+        # Must buffer this later on
+        sock.send(data)
+utility = Utility()
 
 
 class Worker:
@@ -76,7 +99,7 @@ class Worker:
             # This logging can be here as the thread is required to sleep
             # and therefore performs periodic logging automatically
             self.lock["pool"].acquire()
-            with open('logs/worker.log', 'a') as wire:
+            with open('worker.log', 'a') as wire:
                 print(self.pool, file=wire)
                 print("============================================", file=wire)
             self.lock["pool"].release()
@@ -133,7 +156,7 @@ class Worker:
 
 def main():
     # Clear the log file
-    with open('logs/worker.log', 'w') as _:
+    with open('worker.log', 'w') as _:
         pass
 
     listen_port = 4000 #Default
