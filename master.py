@@ -116,13 +116,13 @@ class LeastLoaded(Scheduler):
     """
     name = "LeastLoaded"
     def select(self, workers: list, lock: threading.Lock):
-        min_slots = 1 << 30
+        max_slots = -1
         max_idx = -1
         while True:
             for i in range(len(workers)):
                 # Update max free slots available and the index of worker
-                if workers[i].free > 0 and workers[i].used < min_slots:
-                    min_slots = workers[i].used
+                if workers[i].free > 0 and workers[i].free > max_slots:
+                    max_slots = workers[i].free
                     max_idx = i
 
             # If no slots are free, sleep for one second
