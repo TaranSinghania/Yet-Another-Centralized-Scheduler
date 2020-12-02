@@ -464,12 +464,12 @@ class TaskMaster:
             # If they are copies, the later locks on workers is not required
             self.lock["workers"].acquire()
             workers_list = list(self.workers.values())
-            workers_list.sort(key=lambda x: x.w_id)
+            workers_list.sort(key=lambda x: x.w_id) # Sorting workers according to ID
             index = self.scheduler.select(workers_list, self.lock["workers"])
             self.lock["workers"].release()
 
             if index == -1:
-                time.sleep(0.2)
+                time.sleep(0.2) # Sleep interval if no workers are found
                 continue
             # Update variables if succesful
             with self.lock["ready_q"]:
@@ -598,7 +598,8 @@ def main():
         client_side_thread, scheduler_thread, worker_side_thread,
         worker_logger_thread, debug_logger_thread
     ]
-
+    
+    # Start all the threads
     for thread in threads:
         thread.start()
     
