@@ -294,7 +294,7 @@ class TaskMaster:
         with open(self.w_log, 'w') as wire:
             # Write the log file format
             # Worker-id - number of tasks
-            wire.write(f"{len(worker)}\n")
+            wire.write(f"{len(self.workers)}\n")
             wire.write("# Worker-id, Number of tasks running, Timestamp\n")
         
         # TM timer
