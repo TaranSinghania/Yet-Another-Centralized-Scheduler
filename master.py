@@ -68,8 +68,8 @@ class Random(Scheduler):
     name = "Random"
     def select(self, workers: list, lock: threading.Lock):
         # If a worker is not free remove from random selection
-        yet_to_try = list(enumerate(workers.copy()))
-        while yet_to_try:
+        yet_to_try = list(enumerate(workers.copy())) # List of tuples (index, worker)
+        while yet_to_try: # Keep trying until yet_to_try is empty
             index = random.randrange(0, len(yet_to_try))
             real_index, worker = yet_to_try[index]
             if worker.free > 0:
@@ -97,7 +97,7 @@ class RoundRobin(Scheduler):
         if self.prev == -1:
             start = 0
         else:
-            start = (self.prev + 1) % n
+            start = (self.prev + 1) % n # Circular queue
         # How many nodes to search before giving up
         counter = n
         while counter > 0:
@@ -127,6 +127,7 @@ class LeastLoaded(Scheduler):
 
             # If no slots are free, sleep for one second
             if max_idx == -1:
+                # Selective waiting
                 lock.release()
                 time.sleep(1)
                 lock.acquire()
@@ -177,7 +178,7 @@ class Task:
         elif 'reducer'in kwargs:
             self.type = REDUCER
 
-        # Unique identifier, extra protection with task_id
+        # 128 bit Unique identifier, extra protection with task_id
         self.hash = uuid.uuid4().hex + str(task_id)
     
     def dispatch(self):
@@ -280,7 +281,7 @@ class TaskMaster:
 
         # Lock while using
         self.jobs = {}
-        # Store id: arrival time
+        # job id: arrival time, number of mappers, number of reducers, reducer_started (bool)
 
         # Locks for all variables which can be accessed in different threads
         lockable_items = [
@@ -294,7 +295,7 @@ class TaskMaster:
         with open(self.w_log, 'w') as wire:
             # Write the log file format
             # Worker-id - number of tasks
-            wire.write(f"{len(self.workers)}\n")
+            wire.write(f"{len(self.workers)}\n") # Used to extract number of workers while performing analysis.
             wire.write("# Worker-id, Number of tasks running, Timestamp\n")
         
         # TM timer
@@ -302,7 +303,7 @@ class TaskMaster:
     
     #NOTE: Separate thread
     def serve(self):
-        # The client facing server
+        # The client facing server, building data structures -> ready_q, wait_q, jobs
         # Any job it receives is split between the ready_q and wait_q
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.bind(CLIENT_SIDE_ADDR)
@@ -328,6 +329,7 @@ class TaskMaster:
             self.jobs[job_id]["no_mappers"] = len(job['map_tasks'])
             self.jobs[job_id]["no_reducers"] = len(job['reduce_tasks'])
 
+            # Check if any map tasks are present
             mapper_not_exist = (len(job['map_tasks']) == 0)
 
             # Indicate if the reducers have been started
@@ -394,11 +396,11 @@ class TaskMaster:
             with self.lock["stdout"]:
                 print("Task complete", task.hash)
 
-            # Log task completion
+            # Log task completion -> Used in calculating mean and median task completion times
             with open("task" + scheduling_algorithm + ".log", 'a') as wire:
                 print(f"{task.task_id} - {task.completion_time}", file=wire)
 
-            # Update job
+            # Update job dictionary
             job = task.job_id
             self.lock["jobs"].acquire()
             if task.type == MAPPER:
@@ -415,13 +417,13 @@ class TaskMaster:
                 # Move all reducers from the waiting queue to the ready queue
                 with self.lock["wait_q"]:
                     reducers = list(filter(lambda x: x.job_id == job, self.wait_q))
-                    self.wait_q = [x for x in self.wait_q if x not in reducers]
+                    self.wait_q = [x for x in self.wait_q if x not in reducers] # Removing those reducers from wait_q
                 
                 with self.lock["ready_q"]:
-                    self.ready_q.extend(reducers)
+                    self.ready_q.extend(reducers) # Adding to ready queue
                 
                 with self.lock["jobs"]:
-                    self.jobs[job]["started_reducers"] = True
+                    self.jobs[job]["started_reducers"] = True # Mark reduce tasks as started
             
             # If all the reducers have finished
             self.lock["jobs"].acquire()
@@ -473,9 +475,10 @@ class TaskMaster:
                 continue
             # Update variables if succesful
             with self.lock["ready_q"]:
+                # Using LIFO. To change to FIFO, use pop(0)
                 task = self.ready_q.pop()
 
-            # Verify no lock required for this
+            # Getting Worker object
             with self.lock["workers"]:
                 worker = workers_list[index]
 

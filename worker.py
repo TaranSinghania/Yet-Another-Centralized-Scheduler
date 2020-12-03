@@ -130,7 +130,7 @@ class Worker:
                     self.notify(self.pool[i])
                     # This position is free
                     continue
-                # Move the task to the first free position in the list
+                # Move the task to the first free position in the list [Left Shift]
                 self.pool[first_free_position] = self.pool[i]
                 # That position is now occupied, move on
                 first_free_position += 1
