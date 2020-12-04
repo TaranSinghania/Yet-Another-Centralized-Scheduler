@@ -306,6 +306,13 @@ class TaskMaster:
         # The client facing server, building data structures -> ready_q, wait_q, jobs
         # Any job it receives is split between the ready_q and wait_q
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # Get the old state of the SO_REUSEADDR option
+        old_state = server_sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+        # Enable the SO_REUSEADDR option
+        server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        new_state = server_sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+
         server_sock.bind(CLIENT_SIDE_ADDR)
         server_sock.listen()
 
